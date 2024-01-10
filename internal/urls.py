@@ -7,5 +7,5 @@ urlpatterns = [
     path('events/unconfirmed',views.getUnconfirmed ,name="unconfirmed"),
     path('event/add/',views.addEvent,name="addEvent"),
     path('events/update/',views.updateEvent,name="updateEvent"),
-    path('sheets/view/', views.display_sheet, name="display_sheet")
+   # path('sheets/view/', views.display_sheet, name="display_sheet")
 ]
