@@ -261,11 +261,12 @@ def apply_event_paid(request: Request):
                                                         transactionId=transactionId,verified=verified,
                                                         CACode=CAcode)
 
-            val = EventTable.cult_checker(eventTableObject)
-            if not val:
-                eventTableObject.save()
-            else:
-                return val
+            # Uncomment when frontend is done
+            # val = EventTable.cult_checker(eventTableObject)
+            # if not val:
+            #     eventTableObject.save()
+            # else:
+            #     return val
 
 
             eventTableObject.save()
@@ -308,12 +309,12 @@ def apply_event_free(request):
         eventTableObject = EventTable.objects.create(eventId=event_id,
                                                     emails=EventTable.serialise_emails(participants), #type: ignore
                                                     transactionId=transactionId, verified=True)
-
-        val = EventTable.cult_checker(eventTableObject)
-        if not val:
-            eventTableObject.save()
-        else:
-            return val
+        # Uncomment when frontend catches up
+        # val = EventTable.cult_checker(eventTableObject)
+        # if not val:
+        #     eventTableObject.save()
+        # else:
+        #     return val
 
         eventTableObject.save()
         return r200("Event applied")
@@ -388,38 +389,3 @@ def send_grievance(request: Request):
                 'status':400,
                 'success': False
             })
-
-@api_view(['POST'])
-def display_sheet(request):
-    data = request.data
-    eventID = data['id'] if data != None else None
-    if eventID:
-        teamlst = EventTable.objects.filter(eventId=eventID)
-        teamdict = {}  # info of each team
-        participants = []  # participants to be added
-
-        for i, team in enumerate(teamlst):
-            partis = list(team.emails.split("\n"))
-            teamdict['team'] = f"Team{i + 1}"
-            teamdict["details"] = []
-            for part in partis:
-                prof = Profile.objects.get(email=part)
-                detail = {
-                    "name": f"{prof.username}",
-                    "email": f"{part}",
-                    "phone": f"{prof.phone}",
-                    "CA": f"{team.CACode}"
-                }
-                teamdict["details"].append(detail)
-
-            participants.append(teamdict)
-
-        event = {
-            "name": f"{Event.objects.get(eventId=eventID).name}",
-            "participants": participants
-        }
-
-        response = json.dumps(event)
-        print(type(Response(event)))
-
-        return Response(event)

@@ -11,5 +11,5 @@ urlpatterns = [
     path('events/apply/paid',views.apply_event_paid ,name="applyEventpaid"),
     path('events/apply/free',views.apply_event_free ,name="applyEventfree"),
     path('send_grievance',views.send_grievance,name="send_grievance"),
-    path('sheets/view', views.display_sheet,name="sheets")
+    # path('sheets/view', views.display_sheet,name="sheets")
 ]

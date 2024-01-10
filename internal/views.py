@@ -4,7 +4,8 @@ import sys
 
 from django.http import JsonResponse
 
-sys.path.append('/updatepetrichor/petrichor.backend/app') # CHANGE REQUIRED!
+# sys.path.append('/updatepetrichor/petrichor.backend/app') # CHANGE REQUIRED!
+# from petrichor
 # from updatepetrichor.petrichor.backend.app.models import *
 
 
@@ -161,6 +162,52 @@ def updateEvent(request):
         print(e)
         # send_error_mail(inspect.stack()[0][3], request.data, e)
         return r500(f'Error: {e}')
+
+
+@api_view(['GET'])
+def display_sheet(request):
+    response = {
+        "data" : [
+            "name",
+            "email",
+            "phone",
+            "CA"
+        ],
+        "events": []
+    }
+
+    eventlst = Event.objects.all()
+    for event in eventlst:
+        eventID = event.eventId
+        teamlst = EventTable.objects.filter(eventId=eventID)
+        teamdict = {}  # info of each team
+        participants = []  # participants to be added
+
+        # for i, team in enumerate(teamlst):
+
+        for i, team in enumerate(teamlst):
+            partis = list(team.emails.split("\n"))
+            teamdict['team'] = f"Team{i + 1}"
+            teamdict["details"] = []
+            for part in partis:
+                prof = Profile.objects.get(email=part)
+                detail = {
+                    "name": f"{prof.username}",
+                    "email": f"{part}",
+                    "phone": f"{prof.phone}",
+                    "CA": f"{team.CACode}"
+                }
+                teamdict["details"].append(detail)
+
+            participants.append(teamdict)
+        event_dict = {
+            "name": f"{event.name}",
+            "participants": participants
+        }
+
+        response['events'].append(event_dict)
+    print(response)
+    return Response(response)
 
 
 
