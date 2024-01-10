@@ -190,13 +190,21 @@ def display_sheet(request):
             teamdict['team'] = f"Team{i + 1}"
             teamdict["details"] = []
             for part in partis:
-                prof = Profile.objects.get(email=part)
-                detail = {
-                    "name": f"{prof.username}",
-                    "email": f"{part}",
-                    "phone": f"{prof.phone}",
-                    "CA": f"{team.CACode}"
-                }
+                try:
+                    prof = Profile.objects.get(email=part)
+                    detail = {
+                        "name": f"{prof.username}",
+                        "email": f"{part}",
+                        "phone": f"{prof.phone}",
+                        "CA": f"{team.CACode}"
+                    }
+                except:
+                    detail = {
+                        "name": f"not registered",
+                        "email": f"{part}",
+                        "phone": f"not registered",
+                        "CA": f"{team.CACode}"
+                    }
                 teamdict["details"].append(detail)
 
             participants.append(teamdict)
