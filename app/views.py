@@ -255,6 +255,9 @@ def apply_event_paid(request: Request):
             if user_email.endswith("smail.iitpkd.ac.in"):
                 verified=True
                 transactionId="IIT Palakkad Student"
+            
+            if EventTable.objects.filter(transactionId = transactionId).first():
+                return r500("Same Transaction ID has been used to apply for another event.")
                 
             eventTableObject = EventTable.objects.create(eventId=event_id,
                                                         emails=EventTable.serialise_emails(participants), #type: ignore
@@ -273,10 +276,10 @@ def apply_event_paid(request: Request):
             return r200("Event applied")
         except Exception  as e:
             send_error_mail(inspect.stack()[0][3], request.data, e)
-            return r500("Already Applied")
+            return r500("Unexpected Error: E01")
     except Exception as e:
             send_error_mail(inspect.stack()[0][3], request.data, e)
-            return r500("Something Bad Happened")
+            return r500("Unexpected Error: E01")
     
 
 # @login_required
