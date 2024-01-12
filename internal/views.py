@@ -163,60 +163,41 @@ def updateEvent(request):
         # send_error_mail(inspect.stack()[0][3], request.data, e)
         return r500(f'Error: {e}')
 
+'''
+Takes in eventID from the request and returns the the participants of that event in json
 
-@api_view(['GET'])
+'''
+@api_view(['POST'])
 def display_sheet(request):
-    response = {
-        "data" : [
-            "name",
-            "email",
-            "phone",
-            "CA"
-        ],
-        "events": []
-    }
-
-    eventlst = Event.objects.all()
-    for event in eventlst:
-        eventID = event.eventId
+    data = request.data
+    eventID = data['id'] if data != None else None
+    if eventID:
         teamlst = EventTable.objects.filter(eventId=eventID)
         teamdict = {}  # info of each team
         participants = []  # participants to be added
-
-        # for i, team in enumerate(teamlst):
 
         for i, team in enumerate(teamlst):
             partis = list(team.emails.split("\n"))
             teamdict['team'] = f"Team{i + 1}"
             teamdict["details"] = []
             for part in partis:
-                try:
-                    prof = Profile.objects.get(email=part)
-                    detail = {
-                        "name": f"{prof.username}",
-                        "email": f"{part}",
-                        "phone": f"{prof.phone}",
-                        "CA": f"{team.CACode}"
-                    }
-                except:
-                    detail = {
-                        "name": f"not registered",
-                        "email": f"{part}",
-                        "phone": f"not registered",
-                        "CA": f"{team.CACode}"
-                    }
+                prof = Profile.objects.get(email=part)
+                detail = {
+                    "name": f"{prof.username}",
+                    "email": f"{part}",
+                    "phone": f"{prof.phone}",
+                    "CA": f"{team.CACode}"
+                }
                 teamdict["details"].append(detail)
 
             participants.append(teamdict)
-        event_dict = {
-            "name": f"{event.name}",
+
+        event = {
+            "name": f"{Event.objects.get(eventId=eventID).name}",
             "participants": participants
         }
 
-        response['events'].append(event_dict)
-    print(response)
-    return Response(response)
+        response = json.dumps(event)
+        print(type(Response(event)))
 
-
-
-
+        return Response(event)

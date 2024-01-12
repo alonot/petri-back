@@ -48,10 +48,11 @@ class EventTable(models.Model):
     def cult_checker(self):
         email_ls = self.emails.split(sep)
         unregistered_ls =  [email for email in email_ls[1:] if not Profile.objects.filter(email=email).exists()]
-        if len(unregistered_ls):
+        if not len(unregistered_ls):
             return False
         return Response({
-                'status':200,
+                'status':401,
+                'message': 'some emails are not registered',
                 'unregistered_emails': unregistered_ls
             })
 
