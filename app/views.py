@@ -272,6 +272,7 @@ def apply_event_paid(request: Request):
             eventTableObject.save()
             return r200("Event applied")
         except Exception  as e:
+            send_error_mail(inspect.stack()[0][3], request.data, e)
             return r500("Already Applied")
     except Exception as e:
             send_error_mail(inspect.stack()[0][3], request.data, e)
