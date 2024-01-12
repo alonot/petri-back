@@ -196,9 +196,9 @@ def display_sheet(request):
                         "phone": f"not registered",
                         "CA": f"{team.CACode}"
                     }
-                teamdict["details"].append(detail)
+                teamdict["details"].append(detail.copy())
 
-            participants.append(teamdict)
+            participants.append(teamdict.copy())
 
         event = {
             "name": f"{Event.objects.get(eventId=eventID).name}",
