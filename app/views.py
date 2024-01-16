@@ -47,7 +47,7 @@ def signup(request):
                     new_user = User(username=email)
                     new_user.set_password(pass1)
                     new_user.is_active = True
-                    new_user.save()
+                    
                 except IntegrityError as e:
                     # send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
                     return r500('Email already exists')
@@ -67,6 +67,7 @@ def signup(request):
                                                         gradYear=gradyear,
                                                         stream=stream)
                     user_profile.save()
+                    new_user.save()
 
                     return Response({
                         'status': 200,

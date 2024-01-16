@@ -41,6 +41,44 @@ def getUnconfirmed(request):
     except Exception as e:
         return r500("Oopsie Doopsie")
 
+
+@api_view(['GET'])
+def getTR(req):
+    unconfirmed = EventTable.objects.filter(verified = False)
+    data = []
+    for u in unconfirmed:
+        if 'test' in u.transactionId:
+            continue
+        try:
+            event = Event.objects.get(eventId=u.eventId)
+        except Exception as e:
+            if u.eventId:
+                print(u.eventId, "doesnt exist")
+            continue
+        
+        emails = u.get_emails()
+        if not emails:
+            continue
+        main_guy = emails[0]
+        try:
+            main_user = Profile.objects.get(email=main_guy)
+        except Exception as e:
+            if main_guy:
+                print(main_guy, "doesnt exist")
+            continue
+        
+
+        data.append({
+            'transID': u.transactionId,
+            'amount': event.fee,
+            'name': main_user.username,
+            'phone': main_user.phone,
+            'parts': len(emails)
+        })
+    
+    return Response(data)
+
+
 @api_view(['GET'])
 def getEventUsers(request):
     if request.method == "GET":
@@ -86,6 +124,7 @@ def verifyTR(request):
         try:
             event=EventTable.objects.get(transactionId=inputTRId)
             event.verified = True
+            event.save()
             return Response({
                 'status' : 200,
                 'verified': True
