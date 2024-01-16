@@ -227,14 +227,16 @@ def display_sheet(request):
                         "name": f"{prof.username}",
                         "email": f"{part}",
                         "phone": f"{prof.phone}",
-                        "CA": f"{team.CACode}"
+                        "CA": f"{team.CACode}",
+                        "verified":f"{team.verified}"
                     }
                 except:
                     detail = {
                         "name": f"not registered",
                         "email": f"{part}",
                         "phone": f"not registered",
-                        "CA": f"{team.CACode}"
+                        "CA": f"{team.CACode}",
+                        "verified":f"{team.verified}"
                     }
                 teamdict["details"].append(detail.copy())
 
