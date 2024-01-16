@@ -12,6 +12,7 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from app.models import *
 from rest_framework.response import Response
+from app.views import send_error_mail
 # from app.views import send_error_mail
 from resp import r200, r500
 # Create your views here.
@@ -123,29 +124,29 @@ def verifyTR(request):
         inputTRId=data['TransactionId'].strip()
         try:
             event=EventTable.objects.get(transactionId=inputTRId)
-            event.verified = True
-            event.save()
-            return Response({
-                'status' : 200,
-                'verified': True
-            })
         except Exception as e:
             return Response({
                 'status':404,
                 'verified': False,
                 'msg':"Not found in our db"
             })
+        event.verified = True
+        event.save()
+        return Response({
+            'status' : 200,
+            'verified': True
+        })
 
 
 
 
     except Exception as e:
+        send_error_mail(inspect.stack()[0][3], request.data, e)
         return Response({
                 'status':400,
                 'verified': False,
                 'msg':"Opps!! Unable to complete the request!!!"
             })
-
 
 @api_view(['POST'])
 def addEvent(request):

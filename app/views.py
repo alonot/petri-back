@@ -161,7 +161,7 @@ def getUserInfo(request):
                 events=[]
                 eventEntries=EventTable.objects.all()
                 for eventEntry in eventEntries:
-                    if str(user) in eventEntry.emails:
+                    if str(user) in eventEntry.get_emails():
                         events.append({"eventId":eventEntry.eventId,"status":eventEntry.verified})
                 response["events"]=events
                 return Response({
@@ -253,9 +253,9 @@ def apply_event_paid(request: Request):
             return r500("participants, eventid and transactionId required. send all.'")
         try:
             verified=False
-            if user_email.endswith("smail.iitpkd.ac.in"):
+            if all(map(lambda x: x.endswith("smail.iitpkd.ac.in"), participants)): #type: ignore
                 verified=True
-                transactionId="IIT Palakkad Student"
+                transactionId=f"IIT Palakkad Student+{time.time()}"
             
             if EventTable.objects.filter(transactionId = transactionId).first():
                 return r500("Same Transaction ID has been used to apply for another event.")
@@ -266,11 +266,11 @@ def apply_event_paid(request: Request):
                                                         CACode=CAcode)
 
             # Uncomment when frontend is done
-            val = EventTable.cult_checker(eventTableObject)
-            if not val:
-                eventTableObject.save()
-            else:
-                return val
+            # val = EventTable.cult_checker(eventTableObject)
+            # if not val:
+            #     eventTableObject.save()
+            # else:
+            #     return val
 
 
             eventTableObject.save()
@@ -308,18 +308,18 @@ def apply_event_free(request):
 
     try:
         transactionId = f"{user_email}+free+{time.time()}"
-        if user_email.endswith("smail.iitpkd.ac.in"):
-            transactionId=f"IIT Palakkad Student+{time.time()}"
+        # if user_email.endswith("smail.iitpkd.ac.in"):
+        #     transactionId=f"IIT Palakkad Student+{time.time()}"
             
         eventTableObject = EventTable.objects.create(eventId=event_id,
                                                     emails=EventTable.serialise_emails(participants), #type: ignore
                                                     transactionId=transactionId, verified=True)
         # Uncomment when frontend catches up
-        val = EventTable.cult_checker(eventTableObject)
-        if not val:
-            eventTableObject.save()
-        else:
-            return val
+        # val = EventTable.cult_checker(eventTableObject)
+        # if not val:
+        #     eventTableObject.save()
+        # else:
+        #     return val
 
         eventTableObject.save()
         return r200("Event applied")
