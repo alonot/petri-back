@@ -1,3 +1,5 @@
+from userapi import settings
+
 import inspect
 import json
 import sys
@@ -8,6 +10,7 @@ from django.http import JsonResponse
 # from petrichor
 # from updatepetrichor.petrichor.backend.app.models import *
 
+from django.core.mail import send_mail
 
 from rest_framework.decorators import api_view
 from app.models import *
@@ -131,6 +134,18 @@ def verifyTR(request):
                 'msg':"Not found in our db"
             })
         event.verified = True
+        try:
+            eventObj = Event.objects.get(eventId = event.eventId)
+        except Exception as e:
+            return Response({
+                'status':404,
+                'verified': False,
+                'msg':"invalid eventid"
+            })
+        send_mail(f'Petrichor Event Verification Successful',
+                message= f'You have been verified for the event: {eventObj.name}',
+                recipient_list=event.get_emails()+ ['relations.petrichor@iitpkd.ac.in'],
+                from_email=settings.EMAIL_HOST_USER, fail_silently=True)
         event.save()
         return Response({
             'status' : 200,
