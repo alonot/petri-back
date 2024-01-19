@@ -145,7 +145,7 @@ def verifyTR(request):
         send_mail(f'Petrichor Event Verification Successful',
                 message= f'You have been verified for the event: {eventObj.name}',
                 recipient_list=event.get_emails()+ ['relations.petrichor@iitpkd.ac.in'],
-                from_email=settings.EMAIL_HOST_USER, fail_silently=True)
+                from_email=settings.EMAIL_HOST_USER)
         event.save()
         return Response({
             'status' : 200,
