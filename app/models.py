@@ -73,6 +73,6 @@ def get_event_from_id(id):
 def get_eventtable_from_id(id):
     return EventTable.objects.get(transactionId=id)
 
-@lru_cache()
+@lru_cache(maxsize=1024)
 def get_profile_from_email(email):
     return Profile.objects.get(email=email)

@@ -2,7 +2,7 @@ from userapi import settings
 
 import inspect
 import json
-from functools import lru_cache
+# from functools import lru_cache
 
 from django.http import JsonResponse
 
