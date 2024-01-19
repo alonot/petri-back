@@ -2,7 +2,7 @@ from userapi import settings
 
 import inspect
 import json
-import sys
+from functools import lru_cache
 
 from django.http import JsonResponse
 
@@ -44,6 +44,8 @@ def getUnconfirmed(request):
         )
     except Exception as e:
         return r500("Oopsie Doopsie")
+    
+
 
 
 @api_view(['GET'])
@@ -54,7 +56,8 @@ def getTR(req):
         if 'test' in u.transactionId:
             continue
         try:
-            event = Event.objects.get(eventId=u.eventId)
+            # event = Event.objects.get(eventId=u.eventId)
+            event = get_event_from_id(u.eventId)
         except Exception as e:
             if u.eventId:
                 print(u.eventId, "doesnt exist")
@@ -65,7 +68,8 @@ def getTR(req):
             continue
         main_guy = emails[0]
         try:
-            main_user = Profile.objects.get(email=main_guy)
+            # main_user = Profile.objects.get(email=main_guy)
+            main_user = get_profile_from_email(main_guy)
         except Exception as e:
             if main_guy:
                 print(main_guy, "doesnt exist")
@@ -136,6 +140,7 @@ def verifyTR(request):
         event.verified = True
         try:
             eventObj = Event.objects.get(eventId = event.eventId)
+            eventObj = get_event_from_id(event.eventId)
         except Exception as e:
             return Response({
                 'status':404,
@@ -227,42 +232,45 @@ def display_sheet(request):
     data = request.data
     eventID = data['id'] if data != None else None
     if eventID:
-        teamlst = EventTable.objects.filter(eventId=eventID)
-        teamdict = {}  # info of each team
-        participants = []  # participants to be added
+        return getDataFromID(eventID)
 
-        for i, team in enumerate(teamlst):
-            partis = list(team.emails.split("\n"))
-            teamdict['team'] = f"Team{i + 1}"
-            teamdict["details"] = []
-            for part in partis:
-                try:
-                    prof = Profile.objects.get(email=part)
-                    detail = {
+# @lru_cache()
+def getDataFromID(eventID):
+    teamlst = EventTable.objects.filter(eventId=eventID)
+    teamdict = {}  # info of each team
+    participants = []  # participants to be added
+
+    for i, team in enumerate(teamlst):
+        partis = list(team.emails.split("\n"))
+        teamdict['team'] = f"Team{i + 1}"
+        teamdict["details"] = []
+        for part in partis:
+            try:
+                # prof = Profile.objects.get(email=part)
+                prof = get_profile_from_email(part)
+                detail = {
                         "name": f"{prof.username}",
                         "email": f"{part}",
                         "phone": f"{prof.phone}",
                         "CA": f"{team.CACode}",
                         "verified":f"{team.verified}"
                     }
-                except:
-                    detail = {
+            except:
+                detail = {
                         "name": f"not registered",
                         "email": f"{part}",
                         "phone": f"not registered",
                         "CA": f"{team.CACode}",
                         "verified":f"{team.verified}"
                     }
-                teamdict["details"].append(detail.copy())
+            teamdict["details"].append(detail.copy())
 
-            participants.append(teamdict.copy())
+        participants.append(teamdict.copy())
 
-        event = {
-            "name": f"{Event.objects.get(eventId=eventID).name}",
+    event = {
+            # "name": f"{Event.objects.get(eventId=eventID).name}",
+            "name": f"{get_event_from_id(eventID).name}",
             "participants": participants
         }
 
-        response = json.dumps(event)
-        print(type(Response(event)))
-
-        return Response(event)
+    return Response(event)

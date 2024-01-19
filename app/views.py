@@ -141,7 +141,8 @@ def getUserInfo(request):
         user = get_user_from_session(request)
         if user:
             print("Passed",user,"p")
-            profileUser=Profile.objects.get(email=user)
+            # profileUser=Profile.objects.get(email=user)
+            profileUser=get_profile_from_email(user)
             if profileUser:
                 response={
                     "username":profileUser.username,
@@ -351,7 +352,8 @@ def get_event_data(request):
         except KeyError as e:
             return r500("Send an eventID")
         
-        event = Event.objects.filter(eventId = event_id).first()
+        # event = Event.objects.filter(eventId = event_id).first()
+        event = get_event_from_id(event_id)
         if event is None:
             return r500(f"Invalid Event ID = {event_id}")
         return Response({

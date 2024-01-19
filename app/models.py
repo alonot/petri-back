@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from rest_framework.response import Response
+from functools import lru_cache
 
 # Create your models here.
 User=get_user_model()
@@ -62,3 +63,16 @@ class EventTable(models.Model):
     
     def get_emails(self) -> list[str]:
         return self.emails.split(sep)
+
+
+@lru_cache()
+def get_event_from_id(id):
+    return Event.objects.get(eventId=id)
+
+@lru_cache()
+def get_eventtable_from_id(id):
+    return EventTable.objects.get(transactionId=id)
+
+@lru_cache()
+def get_profile_from_email(email):
+    return Profile.objects.get(email=email)
