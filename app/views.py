@@ -357,10 +357,10 @@ def get_event_data(request):
         if event is None:
             return r500(f"Invalid Event ID = {event_id}")
         return Response({
-            "name": event.name,
-            "fee": event.fee,
-            "minMemeber": event.minMember,
-            "maxMemeber": event.maxMember
+            "name": event['name'],
+            "fee": event['fee'],
+            "minMemeber": event['minMember'],
+            "maxMemeber": event['maxMember']
         })
     except Exception as e:
             send_error_mail(inspect.stack()[0][3], request.data, e)

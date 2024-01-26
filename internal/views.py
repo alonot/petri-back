@@ -78,7 +78,8 @@ def getTR(req):
 
         data.append({
             'transID': u.transactionId,
-            'amount': event.fee,
+            # 'amount': event.fee,
+            'amount': event['fee'],
             'name': main_user.username,
             'phone': main_user.phone,
             'parts': len(emails)
@@ -139,7 +140,7 @@ def verifyTR(request):
             })
         event.verified = True
         try:
-            eventObj = Event.objects.get(eventId = event.eventId)
+            # eventObj = Event.objects.get(eventId = event.eventId)
             eventObj = get_event_from_id(event.eventId)
         except Exception as e:
             return Response({
@@ -148,7 +149,8 @@ def verifyTR(request):
                 'msg':"invalid eventid"
             })
         send_mail(f'Petrichor Event Verification Successful',
-                message= f'You have been verified for the event: {eventObj.name}',
+                # message= f'You have been verified for the event: {eventObj.name}',
+                message= f'You have been verified for the event: {eventObj["name"]}',
                 recipient_list=event.get_emails()+ ['relations.petrichor@iitpkd.ac.in'],
                 from_email=settings.EMAIL_HOST_USER)
         event.save()
@@ -269,7 +271,7 @@ def getDataFromID(eventID):
 
     event = {
             # "name": f"{Event.objects.get(eventId=eventID).name}",
-            "name": f"{get_event_from_id(eventID).name}",
+            "name": f"{get_event_from_id(eventID)['name']}",
             "participants": participants
         }
 
