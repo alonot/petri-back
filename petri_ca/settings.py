@@ -37,7 +37,8 @@ CORS_ORIGIN_WHITELIST = [
     'http://localhost:5173','https://petri-front.onrender.com'
 ]
 
-
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # or 'django.contrib.sessions.backends.cache'
+SESSION_COOKIE_SECURE = DEBUG  # Set to True if using HTTPS
 # Application definition
 
 INSTALLED_APPS = [
@@ -88,13 +89,18 @@ WSGI_APPLICATION = 'petri_ca.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if DEBUG:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
-
+else:
+    DATABASES = {
+        "default": dj_database_url.parse("postgresql://alonot:okiPkeWaUUE7eEKq7U0Z5Uy4RGOtXJhz@dpg-cpsl9s56l47c73e81ukg-a.oregon-postgres.render.com/petridata")
+        # "default": dj_database_url.parse(os.environ.get("DATABASE_URL"))
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -130,7 +136,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = 'static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
