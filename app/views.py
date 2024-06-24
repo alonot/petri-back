@@ -15,7 +15,7 @@ import datetime
 def login_user(request: HttpRequest):
     if request.method != "POST":
         return
-    
+    print("K")
     if request.data is None:
         print("No data")
         return Response({
@@ -26,9 +26,10 @@ def login_user(request: HttpRequest):
     email = request.data['email'].strip()
     password = request.data['password']
 
+    print("Hello")
     user = authenticate(username = email, password = password)
     if user is None:
-        print("user:","Not")
+        # print("user:","Not")
         return Response({
             'success' : False,
             'message' : "Invalid Credentials"
@@ -56,6 +57,7 @@ def login_user(request: HttpRequest):
                         httponly=True,
                         samesite='None',
                         )
+        print("Logged")
         return res
 
 @api_view(['POST'])
@@ -77,23 +79,29 @@ def logout_user(request:HttpRequest):
     
 @api_view(['POST'])
 def authenticated(request:HttpRequest):
-    if request.method == 'POST':
-        print(request.user.is_authenticated)
-        token = request.COOKIES.get('session_token')
-        try:
-            session = Session.objects.get(session_key= token)
-            session_data = session.get_decoded()    
-            uid = session_data.get('_auth_user_id')
-            user = User.objects.get(id=uid)
-            user_profile = Profile.objects.get(email = user.username)
-            return Response({
-                'success':True,
-                'message':'Yes',
-                'username':user_profile.username
-            },200)
-        except Session.DoesNotExist:
-            
-            return Response({
-                'success':False,
-                'message':'No'
-            },200)  
+    if request.method != 'POST':
+        return Response({
+            "status":301
+        },301)
+        # print(request.user.is_authenticated)
+    # print(request.get_host())
+    token = request.COOKIES.get('session_token')
+    print(request.COOKIES)
+    print(token)
+    try:
+        session = Session.objects.get(session_key= token)
+        session_data = session.get_decoded()    
+        uid = session_data.get('_auth_user_id')
+        user = User.objects.get(id=uid)
+        user_profile = Profile.objects.get(email = user.username)
+        return Response({
+            'success':True,
+            'message':'Yes',
+            'username':user_profile.username
+        },200)
+    except Session.DoesNotExist:
+        
+        return Response({
+            'success':False,
+            'message':'No'
+        },200)  

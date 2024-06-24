@@ -28,19 +28,20 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = True
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5173',
+    'http://localhost:5173','https://petri-front.onrender.com'
 ]
 ALLOWED_HOSTS = [
-    'localhost','127.0.0.1', 'http://localhost:5173'
+    '*'
 ]
 CORS_ORIGIN_WHITELIST = [
-    'http://localhost:5173',
+    'http://localhost:5173','https://petri-front.onrender.com'
 ]
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -49,7 +50,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'app',
-    'corsheaders',
 ]
 
 MIDDLEWARE = [
