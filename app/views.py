@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from django.http import HttpRequest
 from django.core.mail import send_mail
 
-from petri_ca.utils import get_profile_data, get_user_from_session, send_error_mail
+from petri_ca.utils import error_response, get_profile_data, get_user_from_session, send_error_mail, success_response
 from .models import Institute, Profile
 import datetime
 from django.db.utils import IntegrityError
@@ -99,6 +99,11 @@ def signup(request):
         return r500("Something Bad Happened")
 
 
+
+
+from rest_framework.request import Request, Empty
+from .models import *
+import json, inspect, time
 
 
 @api_view(['POST'])
@@ -326,3 +331,95 @@ def send_grievance(request: HttpRequest):
                 'status':400,
                 'success': False
             })
+
+
+
+
+
+@api_view(['POST'])
+def apply_event_paid(request: Request):
+    try:
+        data = request.data
+        if not data:
+            return error_response("Invalid form")
+        
+
+        try:
+            user_id = data['user_id']
+            participants = data['participants']
+            event_id = data['eventId'].strip()
+            transactionId = data['transactionID'].strip()
+            CAcode = data['CAcode'].strip()
+        except KeyError as e:
+            return error_response("Missing required fields: participants, eventId, and transactionId")
+        
+        try:
+            # Check if participants' emails are from IIT Palakkad
+            verified=False
+            if all(map(lambda x: x.endswith("smail.iitpkd.ac.in"), participants)): 
+                verified=True
+                transactionId=f"IIT Palakkad Student+{time.time()}"
+
+            # Check for duplicate transaction ID
+            if TransactionTable.objects.filter(transactionId=transactionId).exists():
+                return error_response("Duplicate transaction ID used for another event")
+
+
+
+            # Create a new event record
+            eventpaidTableObject = TransactionTable.objects.create(
+                event_id=event_id,
+                user_id = user_id,
+                participants= TransactionTable.serialise_emails(participants),
+                transaction_id=transactionId,
+                verified=verified,
+                CACode=CAcode
+            )
+
+
+            eventpaidTableObject.save()
+            return success_response("Event applied successfully")
+        except Exception as e:
+            return error_response("Unexpected error occurred while processing the event application")
+    except Exception as e:
+        return error_response("Unexpected error occurred")
+
+    
+
+@api_view(['POST'])
+def apply_event_free(request: Request):
+    data = request.data
+    if not data:
+        return error_response("Invalid form")
+
+    try:
+
+        user_id = data['user_id']
+        participants = data['participants']
+        event_id = data['eventId'].strip()
+
+    except KeyError as e:
+        return error_response("Missing required fields: participants and eventId")
+    
+    try:
+        transaction_id = f"{user_id}+free+{time.time()}"
+
+    
+
+        # Create a new event record
+        eventfreeTableObject = TransactionTable.objects.create(
+        event_id=event_id,
+        user_id = user_id,
+        participants=TransactionTable.serialise_emails(participants),
+        transaction_id = transaction_id,
+        verified=True
+        )
+
+        eventfreeTableObject.save()
+        return success_response("Event applied successfully")
+
+    except Exception as e:
+        return error_response(f"Something went wrong: {str(e)}")
+    
+
+
