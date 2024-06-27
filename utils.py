@@ -1,10 +1,24 @@
+from collections import OrderedDict
 import inspect
 import json
 from django.contrib.sessions.models import Session
 from django.core.mail import send_mail
+from django.http import HttpRequest
 
-from petri_ca.app.models import Institute, Profile, User
-from petri_ca.petri_ca import settings
+from app.models import Institute, Profile, User
+from petri_ca import settings
+from rest_framework.response import Response 
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+
+
+Refreshserializer = TokenRefreshSerializer()
+
+# Helper functions
+def error_response(message):
+    return Response({"error": message}, status=500)
+
+def success_response(message):
+    return Response({"message": message}, status=200)
 
 
 def send_error_mail(name, data, e):
@@ -73,3 +87,26 @@ def get_profile_events(user_email:str):
     except Exception as e:
         send_error_mail(inspect.stack()[0][3], user_email, e)
         return []
+
+
+def method_not_allowed():
+    return Response({
+            "status":405,
+            "message":"Method Not Allowed.Use POST"
+        },405)
+
+
+def auth(request:HttpRequest):
+    resp_data = {
+        "loggedIn":True,
+        "refreshed": False,
+    }
+    if request.user.is_authenticated:
+        token = None
+    else:
+        token = Refreshserializer.validate((OrderedDict)(request.data))
+    resp_data['access'] = token
+
+    return resp_data
+
+    

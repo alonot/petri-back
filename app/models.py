@@ -1,3 +1,4 @@
+import datetime
 from django.db import models
 from django.contrib.auth import get_user_model
 
@@ -26,7 +27,7 @@ class Profile(models.Model):
         return self.username
 
 class CAProfile(models.Model):
-    email = models.ForeignKey(Profile)
+    email = models.ForeignKey(Profile,on_delete=models.CASCADE)
     CACode = models.CharField(max_length=8)
     registration = models.IntegerField(default=0)
 

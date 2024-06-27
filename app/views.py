@@ -1,18 +1,25 @@
+from collections import OrderedDict
+import time
 from django.conf import settings
-from django.contrib.auth import authenticate,login,logout
 from rest_framework.request import Empty
 from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
 from rest_framework.decorators  import api_view
+from rest_framework.exceptions import AuthenticationFailed
+
 from rest_framework.response import Response 
 from django.http import HttpRequest
 from django.core.mail import send_mail
 
-from petri_ca.utils import error_response, get_profile_data, get_user_from_session, send_error_mail, success_response
-from .models import Institute, Profile
-import datetime
+from utils import error_response, get_profile_data, send_error_mail, success_response, method_not_allowed,auth  
+from .models import Institute, Profile, TransactionTable,Event
 from django.db.utils import IntegrityError
 import inspect
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from resp import r500, r200
+
+
+TokenSerializer = TokenObtainPairSerializer()
 
 
 @api_view(['POST'])
@@ -21,10 +28,7 @@ def signup(request):
         Registers a User to the database
     '''
     if request.method != 'POST':
-        return Response({
-            "status":302,
-            "message":"Method Not Allowed.Use POST"
-        },302)
+        return method_not_allowed()
 
     try:
         # Retreiving all data
@@ -100,123 +104,63 @@ def signup(request):
 
 
 
-
-from rest_framework.request import Request, Empty
-from .models import *
-import json, inspect, time
-
-
 @api_view(['POST'])
 def login_user(request: HttpRequest):
-
     '''
         Logs the User into the website
+        The access token expires in 5mins. So the frontend must store these 
+        two values and send it in every request(We are trying to read it from the cookie itself).
+        In every request except /register/ and /login/ , Following things will be constant-
+        {
+            loggedIn: True / False  - If False, frontend must direct user to login first
+            refreshed: (if the access token is refreshed) True- "In this case frontend must update the access cookie." 
+                                                        : False-"No action needed from frontend"
+            access: (if refreshed) ? The refreshed token : None;
+        }
+
+
     '''
     if request.method != "POST":
-        return Response({
-            "status":302,
-            "message":"Method Not Allowed.Use POST"
-        },302)
+        return method_not_allowed()
     
     try:
         if request.data is None:
-            print("No data")
+            
             return Response({
                 'success' : False,
                 'message' : "Data not received"
             },status=500)
-
-        email = request.data['email'].strip()
-        password = request.data['password']
-
-        # authenticates the user
-        user = authenticate(username = email, password = password) 
-
-        if user is None:
+        
+        try:
+            # authenticates the user
+            token = TokenSerializer.validate((OrderedDict)(request.data))
+        except AuthenticationFailed as e:
             # Credentials given are invalid
             return Response({
                 'success' : False,
                 'message' : "Invalid Credentials"
             },status=200)
+        user = authenticate(username = request.data['username'], password =  request.data['password'])
+        try:
+            user_profile = Profile.objects.get(email = user.get_username())
+        except Profile.DoesNotExist:
+            user.delete()
+            return Response({
+                "status":400,
+                "message":"User authenticated but its Profile Doesn't Exists.\
+                User has been deleted.Please create a new Profile."
+            },400)
         
-        else:
-            # logs the user. Creates an entry in Sessions table
-            login(request,user)
-            try:
-                user_profile = Profile.objects.get(email = email)
-            except Profile.DoesNotExist:
-                user.delete()
-                return Response({
-                    "status":400,
-                    "message":"User authenticated but its Profile Doesn't Exists.\
-                    User has been deleted.Please create a new Profile."
-                },400)
-            
-            res =  Response({
-                'success' : True,
-                'user': user_profile.username
-            },200)
-
-            max_age = 60 * 60 * 24 * 15
-            expiryDate= datetime.datetime.strftime(
-                datetime.datetime.utcnow() +datetime.timedelta(seconds=max_age),
-                "%a, %d-%b-%Y %H:%M:%S GMT",
-            )
-
-            res.set_cookie('session_token',
-                            value=request.session.session_key,
-                            max_age=max_age,
-                            secure=True,
-                            domain=request.get_host().split(':')[0],
-                            expires=expiryDate,
-                            httponly=True,
-                            samesite='None',
-                            )
-            # print("Logged")
-            return res
+        return Response({
+            'success' : True,
+            'token' : token,
+            'user': user_profile.username
+        },200)
     except Exception as e:
-        send_error_mail(inspect.stack()[0][3],request.data,e)
+        print(e)
+        # send_error_mail(inspect.stack()[0][3],request.data,e)
         return r500("Something went wrong")
     
-    
-
-@api_view(['POST'])
-def logout_user(request:HttpRequest):
-    '''
-        Logouts a user
-    '''
-    if request.method != 'POST':
-        return Response({
-            "status":302,
-            "message":"Method Not Allowed.Use POST"
-        },302)
-    
-    try:
-        # deletes the entry from Session table
-        logout(request)
-        token = request.COOKIES.get('session_token')
-        try:
-            session = Session.objects.get(session_key= token)
-            session.delete()
-        except Session.DoesNotExist as e:
-            pass
-
-        res = Response({
-            'success':True,
-            'message':'Done'
-        },200)
-
-        
-        res.delete_cookie('session_token',domain=request.get_host().split(':')[0])
-        return res
-    except Exception as e:
-        # any exception, the logout function does not throws 
-        # error if session not present.
-        send_error_mail(inspect.stack()[0][3],request.data,e)
-        return Response({
-            'success':False,
-            'message':'some error occured. Reported to our developers'
-        },400)
     
 @api_view(['POST'])
 def authenticated(request:HttpRequest):
@@ -225,10 +169,10 @@ def authenticated(request:HttpRequest):
         send the user events if getEvents = True in the data body
     '''
     if request.method != 'POST':
-        return Response({
-            "status":301
-        },301)
+        return method_not_allowed()
     
+    response_data = auth(request)
+
     try:
         getUser = request.data["getUser"]
         getEvent = request.data["getEvents"]
@@ -239,7 +183,7 @@ def authenticated(request:HttpRequest):
         },400)
 
     try:
-        user = get_user_from_session(request)
+        user = request.user
         if user is not None:
             user_profile = Profile.objects.get(email = user.username)
             user_data = {}
@@ -261,15 +205,12 @@ def authenticated(request:HttpRequest):
             
             return Response({
                 'success':False,
-                'message':'No'
+                'message':'Not logged in'
             },200)  
     
     except Exception as e:
         send_error_mail(inspect.stack()[0][3],request.data,e)
-        return Response({
-            'success':False,
-            'message':'some error occured. Reported to our developers'
-        },400)
+        return r500("some error occured. Reported to our developers")
 
 
 
@@ -278,6 +219,8 @@ def authenticated(request:HttpRequest):
 def get_event_data(request):
     try:
         data=request.data
+
+        return r200("Here")
 
         if data is None:
             return r500("invalid form")
@@ -319,7 +262,7 @@ def send_grievance(request: HttpRequest):
             from_email=settings.EMAIL_HOST_USER,
             recipient_list=["112201020@smail.iitpkd.ac.in","112201024@smail.iitpkd.ac.in", "petrichor@iitpkd.ac.in"]
         )
-        print("grievance email sent")
+        # print("grievance email sent")
         return Response({
                 'status':200,
                 'success': True
@@ -337,7 +280,7 @@ def send_grievance(request: HttpRequest):
 
 
 @api_view(['POST'])
-def apply_event_paid(request: Request):
+def apply_event_paid(request: HttpRequest):
     try:
         data = request.data
         if not data:
@@ -367,7 +310,7 @@ def apply_event_paid(request: Request):
 
 
             # Create a new event record
-            eventpaidTableObject = TransactionTable.objects.create(
+            eventpaidTableObject = TransactionTable(
                 event_id=event_id,
                 user_id = user_id,
                 participants= TransactionTable.serialise_emails(participants),
@@ -387,7 +330,7 @@ def apply_event_paid(request: Request):
     
 
 @api_view(['POST'])
-def apply_event_free(request: Request):
+def apply_event_free(request: HttpRequest):
     data = request.data
     if not data:
         return error_response("Invalid form")
@@ -407,7 +350,7 @@ def apply_event_free(request: Request):
     
 
         # Create a new event record
-        eventfreeTableObject = TransactionTable.objects.create(
+        eventfreeTableObject = TransactionTable(
         event_id=event_id,
         user_id = user_id,
         participants=TransactionTable.serialise_emails(participants),
