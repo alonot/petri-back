@@ -25,22 +25,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-7%zrt&2hd#75^63w&229cop=$w5t_h0#!dox9qmofw=s%@&ju9'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = True
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5173','https://petri-front.onrender.com'
+    'http://localhost:5173','http://10.32.3.173:5173'
 ]
 ALLOWED_HOSTS = [
-    '*'
+    '10.32.3.173','127.0.0.1'
 ]
 CORS_ORIGIN_WHITELIST = [
-    'http://localhost:5173','https://petri-front.onrender.com'
+    'http://localhost:5173','http://10.32.3.173:5173'
 ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # or 'django.contrib.sessions.backends.cache'
-SESSION_COOKIE_SECURE = DEBUG  # Set to True if using HTTPS
+SESSION_COOKIE_SECURE = not DEBUG  # Set to True if using HTTPS
 # Application definition
 
 INSTALLED_APPS = [
@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'django.contrib.staticfiles',
     'rest_framework',
     'app',
 ]
@@ -136,7 +137,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
-
+STATIC_URL = 'static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
