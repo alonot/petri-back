@@ -1,6 +1,4 @@
-from petri_ca import settings
 
-import inspect
 import json
 # from functools import lru_cache
 
@@ -27,8 +25,8 @@ def getEventUsers(request):
         eventid = data.get('eventid')
         
         try:
-            event = EventTable.objects.get(id=eventid)
-        except EventTable.DoesNotExist:
+            event = Event.objects.get(id=eventid)
+        except Event.DoesNotExist:
             return JsonResponse({'error': 'Petrichor event not found'}, status=404)
         
         if event.fee == 0:
@@ -170,7 +168,7 @@ def display_sheet(request):
 
 # @lru_cache()
 def getDataFromID(eventID):
-    teamlst = EventTable.objects.filter(eventId=eventID)
+    teamlst = Event.objects.filter(eventId=eventID)
     teamdict = {}  # info of each team
     participants = []  # participants to be added
 
