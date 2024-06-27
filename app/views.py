@@ -11,6 +11,11 @@ from django.http import HttpRequest
 from .models import Profile
 import datetime
 
+from rest_framework.request import Request, Empty
+from .models import *
+import json, inspect, time
+
+
 @api_view(['POST'])
 def login_user(request: HttpRequest):
     if request.method != "POST":
@@ -105,3 +110,80 @@ def authenticated(request:HttpRequest):
             'success':False,
             'message':'No'
         },200)  
+
+
+
+@api_view(['POST'])
+def apply_event_paid(request: Request):
+    try:
+        data = request.data
+        if not data:
+            return error_response("Invalid form")
+        
+
+        try:
+            user_email = data['email']
+            participants = data['participants']
+            event_id = data['eventId'].strip()
+            transactionId = data['transactionID'].strip()
+            CAcode = data['CAcode'].strip()
+        except KeyError as e:
+            return error_response("Missing required fields: participants, eventId, and transactionId")
+
+
+
+        # Create a new event record
+        eventpaidTableObject = EventTablePaid.objects.create(
+            event_id=event_id,
+            emails= EventTablePaid.serialise_emails(participants),
+            transaction_id=transactionId,
+            verified=False,
+            CACode=CAcode
+        )
+
+
+        eventpaidTableObject.save()
+        return success_response("Event applied successfully")
+    except Exception as e:
+        return error_response("Unexpected error occurred")
+
+    
+
+@api_view(['POST'])
+def apply_event_free(request: Request):
+    data = request.data
+    if not data:
+        return error_response("Invalid form")
+
+    try:
+
+        user_email = data['email']
+        participants = data['participants']
+        event_id = data['eventId'].strip()
+        table_id = data['tableId']
+        CAcode = data['CAcode'].strip()
+
+    except KeyError as e:
+        return error_response("Missing required fields: participants and eventId")
+
+    
+
+    # Create a new event record
+    eventfreeTableObject = EventTableFree.objects.create(
+    event_id=event_id,
+    emails=EventTableFree.serialise_emails(participants),
+    table_id=table_id,
+    verified=True,
+    CACode=CAcode
+    )
+
+    eventfreeTableObject.save()
+    return success_response("Event applied successfully")
+    
+
+# Helper functions
+def error_response(message):
+    return Response({"error": message}, status=500)
+
+def success_response(message):
+    return Response({"message": message}, status=200)
