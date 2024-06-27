@@ -1,17 +1,18 @@
-from collections import OrderedDict
-import inspect
-import json
-from django.contrib.sessions.models import Session
-from django.core.mail import send_mail
-from django.http import HttpRequest
 
-from app.models import Institute, Profile, User
+import json
+from django.core.mail import send_mail
+
+from app.models import Institute, Profile
 from petri_ca import settings
 from rest_framework.response import Response 
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from custom.authorizor import PetrichorJWTAuthentication
 
 
 Refreshserializer = TokenRefreshSerializer()
+PetrichorAuthenticator = PetrichorJWTAuthentication()
+
+AUTH_EXEMPT = ['/internal/','/api/register/','/api/login/']
 
 # Helper functions
 def error_response(message):
@@ -31,62 +32,40 @@ def send_error_mail(name, data, e):
                 message= f'Exception: {e}\nData: {json.dumps(data)}',
                 recipient_list=['112201024@smail.iitpkd.ac.in','112201020@smail.iitpkd.ac.in'],
                 from_email=settings.EMAIL_HOST_USER)
-    
-def get_user_from_session(request):
-    '''
-        gets a user from the request
-        returns none if not logged In
-    '''
-    try:
-        token = request.COOKIES.get('session_token')
-    except KeyError:
-        return None
-    try:
-        session = Session.objects.get(session_key= token)
-        session_data = session.get_decoded()    
-        uid = session_data.get('_auth_user_id')
-        user = User.objects.get(id=uid)
-    except Session.DoesNotExist:
-        return None
-    except User.DoesNotExist:
-        # User doesn't exists so delete this Entry from session Table
-        
-        return None
-    return user
 
 def get_profile_data(user_profile:Profile):
+    '''
+        returns the profile data as a dict
+        NOTE- Any None handled error raised by this functions is/must be handled by the caller function.
+    '''
+    user_data = {}
+    user_data['username'] = user_profile.username
+    user_data['phone'] = user_profile.phone
+    user_data['stream'] = user_profile.stream
+    user_data['gradYear'] = user_profile.gradYear
+    int_id = user_profile.instituteID
     try:
-        user_data = {}
-        user_data['username'] = user_profile.username
-        user_data['phone'] = user_profile.phone
-        user_data['stream'] = user_profile.stream
-        user_data['gradYear'] = user_profile.gradYear
-        int_id = user_profile.instituteID
-        try:
-            institute = Institute.objects.get(pk = int_id)
-            institute = institute.instiName
-        except Institute.DoesNotExist:
-            institute = ""     
-        user_data['institute'] = institute
-        return user_data
-    except Exception as e:
-        send_error_mail(inspect.stack()[0][3], user_profile, e)
-        return {}
+        institute = Institute.objects.get(pk = int_id)
+        institute = institute.instiName
+    except Institute.DoesNotExist:
+        institute = ""     
+    user_data['institute'] = institute
+    return user_data
     
 def get_profile_events(user_email:str):
-    try:
-        events=[]
-        # to be Fixed
-        eventEntries=EventTable.objects.all() # type: ignore
-        for eventEntry in eventEntries:
-            if user_email in eventEntry.get_emails():
-                events.append({
-                    "eventId":eventEntry.eventId,
-                    "status":eventEntry.verified})
-        return events
-    except Exception as e:
-        send_error_mail(inspect.stack()[0][3], user_email, e)
-        return []
+    '''
+        returns the eventIds of events in which this user has registered
+        NOTE- Any None handled error raised by this functions is/must be handled by the caller function.
+    '''
+    events=[]
+    # to be Fixed
+    eventEntries=EventTable.objects.all() # type: ignore
+    for eventEntry in eventEntries:
+        if user_email in eventEntry.get_emails():
+            events.append({
+                "eventId":eventEntry.eventId,
+                "status":eventEntry.verified})
+    return events
 
 
 def method_not_allowed():
@@ -96,17 +75,6 @@ def method_not_allowed():
         },405)
 
 
-def auth(request:HttpRequest):
-    resp_data = {
-        "loggedIn":True,
-        "refreshed": False,
-    }
-    if request.user.is_authenticated:
-        token = None
-    else:
-        token = Refreshserializer.validate((OrderedDict)(request.data))
-    resp_data['access'] = token
 
-    return resp_data
 
     
