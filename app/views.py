@@ -265,3 +265,64 @@ def authenticated(request:HttpRequest):
             'success':False,
             'message':'some error occured. Reported to our developers'
         },400)
+
+
+
+# @login_required # limits the calls to this function ig
+@api_view(['POST'])
+def get_event_data(request):
+    try:
+        data=request.data
+
+        if data is None:
+            return r500("invalid form")
+        try:
+            event_id = data["id"]
+        except KeyError as e:
+            return r500("Send an eventID")
+        
+        try:
+            event = Event.objects.get(eventId = event_id)
+        except:
+            return r500(f"Invalid Event ID = {event_id}")
+        
+        return Response({
+            "name": event['name'],
+            "fee": event['fee'],
+            "minMemeber": event['minMember'],
+            "maxMemeber": event['maxMember']
+        })
+    except Exception as e:
+            send_error_mail(inspect.stack()[0][3], request.data, e)
+            return r500("Something Bad Happened")
+
+
+@api_view(['POST'])
+def send_grievance(request: HttpRequest):
+    try:
+        data = request.data
+        if isinstance(data, Empty) or data is None:
+            return r500("Invalid Form")
+        
+        name = data['name'] # type: ignore
+        email = data['email'] # type: ignore
+        content = data['content'] # type: ignore
+
+        send_mail(
+            subject=f"WEBSITE MAIL: Grievance from '{name}'",
+            message=f"From {name} ({email}).\n\n{content}",
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=["112201020@smail.iitpkd.ac.in","112201024@smail.iitpkd.ac.in", "petrichor@iitpkd.ac.in"]
+        )
+        print("grievance email sent")
+        return Response({
+                'status':200,
+                'success': True
+            })
+
+    except Exception as e:
+        send_error_mail(inspect.stack()[0][3], request.data, e)
+        return Response({
+                'status':400,
+                'success': False
+            })
