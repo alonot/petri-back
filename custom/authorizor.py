@@ -22,5 +22,5 @@ class PetrichorJWTAuthentication(JWTAuthentication):
         auth_token = super().get_header(request)
         if "petrichor_auth" in request.META:
             auth_token = request.META['petrichor_auth']
-        print(auth_token)
+        # print(auth_token)
         return auth_token
