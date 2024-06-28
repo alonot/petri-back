@@ -56,6 +56,9 @@ class TransactionTable(models.Model):
     verified = models.BooleanField()
     CACode = models.CharField(max_length=10, null=True)
 
+    def get_participants(self):
+        return TransactionTable.deserialize_emails(self.participants)
+
     @staticmethod
     def serialise_emails(emails: list[str]) -> str:
         """

@@ -28,7 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-7%zrt&2hd#75^63w&229cop=$w5t_h0#!dox9qmofw=s%@&ju9'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = True
 
@@ -100,7 +100,6 @@ WSGI_APPLICATION = 'petri_ca.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
 if DEBUG:
     DATABASES = {
         'default': {
@@ -109,11 +108,11 @@ if DEBUG:
         }
     }
 else:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(BASE_DIR , "petri_ca",".env"))
     DATABASES = {
-        "default": dj_database_url.parse("postgresql://alonot:okiPkeWaUUE7eEKq7U0Z5Uy4RGOtXJhz@dpg-cpsl9s56l47c73e81ukg-a.oregon-postgres.render.com/petridata")
-        # "default": dj_database_url.parse(os.environ.get("DATABASE_URL"))
+        "default": dj_database_url.parse(os.environ.get("DATABASE_URL"))
     }
-
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 

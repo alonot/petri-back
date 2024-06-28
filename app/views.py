@@ -11,13 +11,14 @@ from django.http import HttpRequest
 from django.core.mail import send_mail
 from django.contrib.auth.models import AnonymousUser
 
-from utils import error_response, get_profile_data, send_error_mail, success_response, method_not_allowed  
+from utils import ResponseWithCode, error_response, get_profile_data, get_profile_events,\
+r500, r200,send_error_mail, success_response, method_not_allowed  
 from .models import Institute, Profile, TransactionTable,Event
 from django.db.utils import IntegrityError
 import inspect
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
-from resp import r500, r200
+
 
 
 TokenSerializer = TokenObtainPairSerializer()
@@ -42,23 +43,19 @@ def signup(request):
         gradyear = data['gradyear']
         insti_type = data['institype']
         stream = data['stream']
-        
         # Checking if User already exists
-        if User.objects.filter(email=email).first():
-            return Response({
-                'status': 404,
-                "registered": False,
-                'message': "Email already registered",
-                "username": username
-            },404)
-
-
-        else:
+        try:
+            User.objects.get(username=email)
+            return ResponseWithCode({
+                "success":True,
+                "username":username
+            },
+            "Email already registered",200)
+        except User.DoesNotExist:
             try:
                 new_user = User(username=email)
                 new_user.set_password(pass1)
                 new_user.is_active = True
-                
             except IntegrityError as e: # Email alreeady exists
                 # send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
                 return r500('Email already exists')
@@ -73,7 +70,7 @@ def signup(request):
                 
                 institute.save() # Kept for safety {create will automatically save}
                 
-                user_profile = Profile.objects.create(username=username, 
+                user_profile = Profile(username=username, 
                                     email=email,
                                     phone=phone,
                                     instituteID=institute.pk,
@@ -83,24 +80,23 @@ def signup(request):
                 # saving the profile and user. If any of above steps fails the User/ Profile will not be created
                 user_profile.save()
                 new_user.save()
-
-                return Response({
-                    'status': 200,
-                    "registered": True,
-                    'message': "Success",
-                    "username": username
-                })
+                print("User Created")
+                return ResponseWithCode({
+                    "succes":True,
+                    "username":username
+                },"success")
             
             except IntegrityError as e:
                 # send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
 
                 return r500("User already exists. Try something different.")
             except Exception as e:
-                send_error_mail(inspect.stack()[0][3], request.data, e)  
+                # send_error_mail(inspect.stack()[0][3], request.data, e)  
                 r500("Something failed")
 
     except Exception as e:
-        send_error_mail(inspect.stack()[0][3], request.data, e)
+        print(e)
+        # send_error_mail(inspect.stack()[0][3], request.data, e)
         return r500("Something Bad Happened")
 
 
@@ -117,6 +113,9 @@ class LoginTokenSerializer(TokenObtainPairSerializer):
                                                         : False-"No action needed from frontend"
             access: (if refreshed) ? The refreshed token : None;
         }
+
+        NOTE FOR DEVS: This function must not use ResponseWithCode() 
+        as this function just returns the data
     '''
     def validate(self, attrs):
         try:
@@ -136,7 +135,7 @@ class LoginTokenSerializer(TokenObtainPairSerializer):
             return {
                 "status": 200,
                 'success' : True,
-                'token' : data,
+                'token' : data['access'],
                 'username': user_profile.username,
                 "message":"Logged in"
             }
@@ -174,15 +173,10 @@ def authenticated(request:HttpRequest):
         getUser = request.data["getUser"]
         getEvent = request.data["getEvents"]
     except Exception as e:
-        return Response({
-            'success':False,
-            'message':'Data not sent as Required'
-        },400)
+        return ResponseWithCode({"success":False},'Data not sent as Required',500)
 
     try:
         user = request.user
-        print(user)
-        # print(user)
         if type(user) is not AnonymousUser:
             user_profile = Profile.objects.get(email = user.username)
             user_data = {}
@@ -190,26 +184,24 @@ def authenticated(request:HttpRequest):
             if getUser == True:
                 user_data = get_profile_data(user_profile)
             if getEvent == True:
-                user_events = get_event_data(user.get_username())
+                user_events = get_profile_events(user.get_username())
 
-            return Response({
+            return ResponseWithCode({
                 'success':True,
-                'message':'Yes',
                 'username':user_profile.username,
                 'user_data': user_data,
                 'user_events':user_events,
-                
-            },200)
+            },"Yes")
         else:
             # send_error_mail(inspect.stack()[0][3],request.data,e)
-            return Response({
+
+            return ResponseWithCode({
                 "success":False,
-                "message":"Login completed but User is Anonymous"
-            })
+            },"Login completed but User is Anonymous",500)
     
     except Exception as e:
-        print(e)
         # send_error_mail(inspect.stack()[0][3],request.data,e)
+        print(e)
         return r500("some error occured. Reported to our developers")
 
 
@@ -233,15 +225,16 @@ def get_event_data(request):
         
         try:
             event = Event.objects.get(eventId = event_id)
-        except:
+        except Event.DoesNotExist:
             return r500(f"Invalid Event ID = {event_id}")
         
-        return Response({
+        return ResponseWithCode({
+            "success":True,
             "name": event['name'],
             "fee": event['fee'],
             "minMemeber": event['minMember'],
             "maxMemeber": event['maxMember']
-        })
+        },"Data fetched")
     except Exception as e:
             send_error_mail(inspect.stack()[0][3], request.data, e)
             return r500("Something Bad Happened")
@@ -254,9 +247,9 @@ def send_grievance(request: HttpRequest):
         if isinstance(data, Empty) or data is None:
             return r500("Invalid Form")
         
-        name = data['name'] # type: ignore
-        email = data['email'] # type: ignore
-        content = data['content'] # type: ignore
+        name = data['name'] 
+        email = data['email'] 
+        content = data['content'] 
 
         send_mail(
             subject=f"WEBSITE MAIL: Grievance from '{name}'",
@@ -265,17 +258,15 @@ def send_grievance(request: HttpRequest):
             recipient_list=["112201020@smail.iitpkd.ac.in","112201024@smail.iitpkd.ac.in", "petrichor@iitpkd.ac.in"]
         )
         # print("grievance email sent")
-        return Response({
-                'status':200,
+        return ResponseWithCode({
                 'success': True
-            })
+            },"Email sent")
 
     except Exception as e:
         send_error_mail(inspect.stack()[0][3], request.data, e)
-        return Response({
-                'status':400,
+        return ResponseWithCode({
                 'success': False
-            })
+            },"Something bad happened",500)
 
 
 
@@ -286,7 +277,7 @@ def apply_event_paid(request: HttpRequest):
     try:
         data = request.data
         if not data:
-            return error_response("Invalid form")
+            return r500("Invalid form")
         
 
         try:
@@ -295,8 +286,8 @@ def apply_event_paid(request: HttpRequest):
             event_id = data['eventId'].strip()
             transactionId = data['transactionID'].strip()
             CAcode = data['CAcode'].strip()
-        except KeyError as e:
-            return error_response("Missing required fields: participants, eventId, and transactionId")
+        except KeyError:
+            return r500("Missing required fields: participants, eventId, and transactionId")
         
         try:
             # Check if participants' emails are from IIT Palakkad
@@ -307,7 +298,7 @@ def apply_event_paid(request: HttpRequest):
 
             # Check for duplicate transaction ID
             if TransactionTable.objects.filter(transactionId=transactionId).exists():
-                return error_response("Duplicate transaction ID used for another event")
+                return r500("Duplicate transaction ID used for another event")
 
 
 
@@ -323,11 +314,13 @@ def apply_event_paid(request: HttpRequest):
 
 
             eventpaidTableObject.save()
-            return success_response("Event applied successfully")
+            return ResponseWithCode({
+                "success":True
+            },"Event applied successfully")
         except Exception as e:
-            return error_response("Unexpected error occurred while processing the event application")
+            return r500("Unexpected error occurred while processing the event application")
     except Exception as e:
-        return error_response("Unexpected error occurred")
+        return r500("Unexpected error occurred")
 
     
 
@@ -335,7 +328,7 @@ def apply_event_paid(request: HttpRequest):
 def apply_event_free(request: HttpRequest):
     data = request.data
     if not data:
-        return error_response("Invalid form")
+        return r500("Invalid form")
 
     try:
 
@@ -344,7 +337,7 @@ def apply_event_free(request: HttpRequest):
         event_id = data['eventId'].strip()
 
     except KeyError as e:
-        return error_response("Missing required fields: participants and eventId")
+        return r500("Missing required fields: participants and eventId")
     
     try:
         transaction_id = f"{user_id}+free+{time.time()}"
@@ -361,10 +354,12 @@ def apply_event_free(request: HttpRequest):
         )
 
         eventfreeTableObject.save()
-        return success_response("Event applied successfully")
+        return ResponseWithCode({
+            "success":True
+        },"Event applied successfully")
 
     except Exception as e:
-        return error_response(f"Something went wrong: {str(e)}")
+        return r500(f"Something went wrong: {str(e)}")
     
 
 
