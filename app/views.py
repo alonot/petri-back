@@ -13,7 +13,7 @@ from django.core.mail import send_mail
 from django.contrib.auth.models import AnonymousUser
 
 from utils import ResponseWithCode, get_profile_data, get_profile_events,\
-r500,send_error_mail, method_not_allowed  
+r500,send_error_mail, method_not_allowed , send_forget_password_mail
 from .models import Institute, Profile, TransactionTable,Event
 from django.db.utils import IntegrityError
 import inspect
@@ -21,6 +21,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 
+import uuid
 
 TokenSerializer = TokenObtainPairSerializer()
 
@@ -96,6 +97,177 @@ def signup(request):
                 new_user.delete()
                 # send_error_mail(inspect.stack()[0][3], request.data, e)  
                 r500("Something failed")
+
+    except Exception as e:
+        send_error_mail(inspect.stack()[0][3], request.data, e)
+        return r500("Something Bad Happened")
+    
+
+
+@api_view(['POST'])
+def ChangePassword(request , token):
+    '''
+        Changes Password
+    '''
+    if request.method != 'POST':
+        return method_not_allowed()
+    
+    try:
+        profile_obj = Profile.objects.filter(forget_password_token = token).first()
+       
+        data = request.data 
+        new_password = data['new_password']
+        confirm_password = data['confirm_password']
+
+        if new_password!=confirm_password:
+            return Response({
+                'status': 404,
+                'message': "Both passwords should be same!!!",
+                "username": None
+            },404)
+        
+        email = profile_obj.email
+        user_obj = User.objects.get(username = email)
+        user_obj.set_password(new_password)
+        user_obj.save()
+        return Response({
+                'status': 200,
+                'message': "Successfully Changed",
+                "username": profile_obj.username
+            },200)
+    
+    except Exception as e:
+        return Response({
+                'status': 404,
+                'message': "Invalid URL",
+                "username": None
+            },404)
+
+
+
+@api_view(['POST'])
+def ForgetPassword(request):
+    '''
+        Reset Password
+
+    '''
+    if request.method != 'POST':
+        return method_not_allowed()
+    try:
+        data = request.data
+        email = data['email'].strip()
+
+        try:
+            User.objects.get(username=email)
+        except User.DoesNotExist:
+            return Response({
+                'status': 404,
+                'message': "No User found with this Email",
+                "username": None
+            },404)
+        
+        token = str(uuid.uuid4()) # Generates Token
+        try:
+            profile_obj=Profile.objects.get(email = email)
+            profile_obj.forget_password_token = token
+            profile_obj.save()
+
+        except Exception as e:
+            send_error_mail(inspect.stack()[0][3], request.data, e)
+            return r500("Something Failed")
+        
+        send_forget_password_mail(email , token)
+        
+        return Response({
+            'status' : 200,
+            'message':'An email is sent'
+        })
+
+    except Exception as e:
+        # print(e)
+        # send_error_mail(inspect.stack()[0][3], request.data, e)
+        return r500("Something Bad Happened")
+    
+
+
+@api_view(['POST'])
+def ChangePassword(request , token):
+    '''
+        Changes Password
+    '''
+    if request.method != 'POST':
+        return method_not_allowed()
+    
+    try:
+        profile_obj = Profile.objects.filter(forget_password_token = token).first()
+       
+        data = request.data 
+        new_password = data['new_password']
+        confirm_password = data['confirm_password']
+
+        if new_password!=confirm_password:
+            return Response({
+                'status': 404,
+                'message': "Both passwords should be same!!!",
+                "username": None
+            },404)
+        
+        email = profile_obj.email
+        user_obj = User.objects.get(username = email)
+        user_obj.set_password(new_password)
+        user_obj.save()
+        return Response({
+                'status': 200,
+                'message': "Successfully Changed",
+                "username": profile_obj.username
+            },200)
+    
+    except Exception as e:
+        return Response({
+                'status': 404,
+                'message': "Invalid URL",
+                "username": None
+            },404)
+
+
+
+@api_view(['POST'])
+def ForgetPassword(request):
+    '''
+        Reset Password
+
+    '''
+    if request.method != 'POST':
+        return method_not_allowed()
+    try:
+        data = request.data
+        email = data['email'].strip()
+
+        try:
+            User.objects.get(username=email)
+        except User.DoesNotExist:
+            return Response({
+                'status': 404,
+                'message': "No User found with this Email",
+                "username": None
+            },404)
+        
+        token = str(uuid.uuid4()) # Generates Token
+        try:
+            profile_obj=Profile.objects.get(email = email)
+            profile_obj.forget_password_token = token
+            profile_obj.save()
+
+        except Exception as e:
+            send_error_mail(inspect.stack()[0][3], request.data, e)
+            return r500("Something Failed")
+        
+        send_forget_password_mail(email , token)
+        
+        return Response({
+            'status' : 200,
+            'message':'An email is sent'
+        })
 
     except Exception as e:
         # print(e)
