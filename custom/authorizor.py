@@ -13,6 +13,7 @@ class PetrichorJWTAuthentication(JWTAuthentication):
         and returns customized message accordingly 
     '''
     def authenticate(self, request: Request):
+        # print("h    ")
         try:
             return super().authenticate(request)
         except InvalidToken:
