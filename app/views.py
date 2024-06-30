@@ -18,7 +18,8 @@ import inspect
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from resp import r500, r200
-
+from django.conf import settings
+from django.core.mail import EmailMessage, send_mail
 
 TokenSerializer = TokenObtainPairSerializer()
 
@@ -282,7 +283,7 @@ def send_grievance(request: HttpRequest):
 
 
 @api_view(['POST'])
-def apply_event_paid(request: HttpRequest):
+def apply_event_paid(request: Request):
     try:
         data = request.data
         if not data:
@@ -296,6 +297,7 @@ def apply_event_paid(request: HttpRequest):
             transactionId = data['transactionID'].strip()
             CAcode = data['CAcode'].strip()
         except KeyError as e:
+            send_error_mail(inspect.stack()[0][3], request.data, e) 
             return error_response("Missing required fields: participants, eventId, and transactionId")
         
         try:
@@ -312,7 +314,7 @@ def apply_event_paid(request: HttpRequest):
 
 
             # Create a new event record
-            eventpaidTableObject = TransactionTable(
+            eventpaidTableObject = TransactionTable.objects.create(
                 event_id=event_id,
                 user_id = user_id,
                 participants= TransactionTable.serialise_emails(participants),
@@ -322,11 +324,22 @@ def apply_event_paid(request: HttpRequest):
             )
 
 
-            eventpaidTableObject.save()
+            # Increase registration count if CAcode is provided
+            if CAcode:
+                try:
+                    ca_profile = CAProfile.objects.get(CACode=CAcode)
+                    ca_profile.registration += 1
+                    ca_profile.save()
+                except CAProfile.DoesNotExist:
+                    return error_response("CA code not found in our database")
+                
+                
             return success_response("Event applied successfully")
         except Exception as e:
+            send_error_mail(inspect.stack()[0][3], request.data, e) 
             return error_response("Unexpected error occurred while processing the event application")
     except Exception as e:
+        send_error_mail(inspect.stack()[0][3], request.data, e) 
         return error_response("Unexpected error occurred")
 
     
@@ -344,6 +357,7 @@ def apply_event_free(request: HttpRequest):
         event_id = data['eventId'].strip()
 
     except KeyError as e:
+        send_error_mail(inspect.stack()[0][3], request.data, e) 
         return error_response("Missing required fields: participants and eventId")
     
     try:
@@ -364,7 +378,105 @@ def apply_event_free(request: HttpRequest):
         return success_response("Event applied successfully")
 
     except Exception as e:
+        send_error_mail(inspect.stack()[0][3], request.data, e) 
         return error_response(f"Something went wrong: {str(e)}")
     
 
 
+@api_view(['POST'])
+def verifyCA(request: Request):
+    try:
+        if request.data is None:
+            return error_response("Invalid Form")
+        
+        data = request.data
+        print("print:", data)
+
+        inputCAcode = data['CAcode'].strip()
+        try:
+            ca_profile = CAProfile.objects.get(CACode=inputCAcode)
+            user_email = ca_profile.email
+            profile = Profile.objects.get(email = user_email)
+            username = profile.username
+            
+            # Send a confirmation email to the user
+            subject = "Petrichor Fest - Campus Ambassador Programme Verification"
+            message = f"Hello {username},\n\nCongratulations! Your Campus Ambassador account with CA code {inputCAcode} has been successfully verified."
+            from_mail = settings.EMAIL_HOST_USER
+            to_mail_ls = [user_email]
+            
+            send_mail(subject, message, from_mail, to_mail_ls, fail_silently=False)
+            
+            return Response({
+                'status': 200,
+                'verified': True,
+                'message': "CA account has been verified and the user has been notified."
+            })
+        except Profile.DoesNotExist:
+            return Response({
+                'status': 404,
+                'verified': False,
+                'message': "CA code not found in our database."
+            })
+        except Exception as e:
+            send_error_mail(inspect.stack()[0][3], request.data, e)
+            return error_response("Something bad happened")
+
+    except Exception as e:
+        return Response({
+            'status': 400,
+            'verified': False,
+            'message': "Oops! Unable to complete the request."
+        })
+
+
+
+
+@api_view(['POST'])
+def unverifyCA(request: Request):
+    try:
+        if request.data is None:
+            return error_response("Invalid Form")
+        
+        data = request.data
+        print("print:", data)
+
+        inputCAcode = data['CAcode'].strip()
+        try:
+            ca_profile = CAProfile.objects.get(CACode=inputCAcode)
+            user_email = ca_profile.email
+            profile = Profile.objects.get(email = user_email)
+            username = profile.username
+            
+            # Delete the profile
+            ca_profile.delete()
+            
+            # Send an email to the user
+            subject = "Petrichor Fest - Campus Ambassador Programme Unverification"
+            message = f"Hello {username},\n\nYour Campus Ambassador account with CA code {inputCAcode} has not been verified and has been removed from our system."
+            from_mail = settings.EMAIL_HOST_USER
+            to_mail_ls = [user_email]
+            
+            send_mail(subject, message, from_mail, to_mail_ls, fail_silently=False)
+            
+            return Response({
+                'status': 200,
+                'unverified': True,
+                'message': "CA account has been removed and the user has been notified."
+            })
+        except Profile.DoesNotExist:
+            return Response({
+                'status': 404,
+                'unverified': False,
+                'message': "CA code not found in our database."
+            })
+        except Exception as e:
+            send_error_mail(inspect.stack()[0][3], request.data, e)
+            return error_response("Something bad happened")
+
+    except Exception as e:
+        return Response({
+            'status': 400,
+            'unverified': False,
+            'message': "Oops! Unable to complete the request."
+        })
