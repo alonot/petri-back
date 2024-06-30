@@ -1,6 +1,6 @@
 # Petrichor backend
 
-Every response from the api will atleast contain following-
+Every response(except for authentication error) from the api will atleast contain following-
 ```javascript
     {
         "status":number:"status_code",
@@ -15,6 +15,35 @@ Every response from the api will atleast contain following-
 *    #### All below case are for status: 200, If status id other than 200, please consider the request to be failed. Any response which have status other than 200, does not gaurentee to contain below additional values.
 
 *    #### @login_required depicts that login is required to resolve this request
+
+
+
+### @login_required
+Every request, which have @login_required, needs to send the access token in Authorization header.
+```javascript
+    login successful -> These items are appended to the response of the request:
+    {
+        "loggedIn":true,
+        "refreshed":false,
+        "token":null
+    }
+```
+```javascript
+    login unsuccessful -> In this case response will contains ONLY the following:
+    {
+        "loggedIn":false,
+        "refreshed":false,
+        "token":null
+    }
+
+```
+```javascript
+    on error-> If there is an error during authentication-
+    {
+        "detail":<description about the error>
+    }
+
+```
 
 ## /api/
 
@@ -72,4 +101,49 @@ Main website will call using this url:
     ```
     
 
+*   /event/
+    ### Expected @login_required
+    ```javascript
+    request = {
+        "id":string:"event id"
+    }
+
+    response = {
+        "success":boolean:"whether request was successful or not",
+        "name":string:"event name",
+        "fee":number,
+        "minMember":number,
+        "maxMember":number,
+    }
+    ```
+
+*   /event/apply/free/
+    ### Expected @login_required
+    ```javascript
+    request = {
+        "user_id":string:"email of the user registering for this"
+        "eventId":string:"event Id",
+        "participants":Array<string> : "participants including the above userId"
+    }
+
+    response = {
+        "success":boolean:"whether event registration was successful or not",
+    }
+    ```
+
+*   /event/apply/paid/
+    ### Expected @login_required
+    ```javascript
+    request = {
+        "user_id":string:"email of the user registering for this"
+        "eventId":string:"event Id",
+        "participants":Array<string> : "participants including the above userId",
+        "transactionID":string ,
+        "CAcode":string : "if not provided keep it-""   "
+    }
+
+    response = {
+        "success":boolean:"whether event registration was successful or not",
+    }
+    ```
 

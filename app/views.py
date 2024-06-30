@@ -1,7 +1,8 @@
 from collections import OrderedDict
 import time
 from django.conf import settings
-from rest_framework.request import Empty
+from django.forms import ValidationError
+from rest_framework.request import Empty, Request
 from django.contrib.auth.models import User
 from rest_framework.decorators  import api_view
 from rest_framework.exceptions import AuthenticationFailed
@@ -11,8 +12,8 @@ from django.http import HttpRequest
 from django.core.mail import send_mail
 from django.contrib.auth.models import AnonymousUser
 
-from utils import ResponseWithCode, error_response, get_profile_data, get_profile_events,\
-r500, r200,send_error_mail, success_response, method_not_allowed  
+from utils import ResponseWithCode, get_profile_data, get_profile_events,\
+r500,send_error_mail, method_not_allowed  
 from .models import Institute, Profile, TransactionTable,Event
 from django.db.utils import IntegrityError
 import inspect
@@ -47,7 +48,7 @@ def signup(request):
         try:
             User.objects.get(username=email)
             return ResponseWithCode({
-                "success":True,
+                "success":False,
                 "username":username
             },
             "Email already registered",200)
@@ -70,32 +71,34 @@ def signup(request):
                 
                 institute.save() # Kept for safety {create will automatically save}
                 
+                new_user.save()
                 user_profile = Profile(username=username, 
-                                    email=email,
+                                    user=new_user,
                                     phone=phone,
                                     instituteID=institute.pk,
                                     gradYear=gradyear,
                                     stream=stream)
-                
+                # print("lo")
                 # saving the profile and user. If any of above steps fails the User/ Profile will not be created
                 user_profile.save()
-                new_user.save()
-                print("User Created")
+                # print("p")
+                # print("User Created")
                 return ResponseWithCode({
-                    "succes":True,
+                    "success":True,
                     "username":username
                 },"success")
             
             except IntegrityError as e:
                 # send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
-
+                new_user.delete()
                 return r500("User already exists. Try something different.")
             except Exception as e:
+                new_user.delete()
                 # send_error_mail(inspect.stack()[0][3], request.data, e)  
                 r500("Something failed")
 
     except Exception as e:
-        print(e)
+        # print(e)
         # send_error_mail(inspect.stack()[0][3], request.data, e)
         return r500("Something Bad Happened")
 
@@ -117,12 +120,14 @@ class LoginTokenSerializer(TokenObtainPairSerializer):
         NOTE FOR DEVS: This function must not use ResponseWithCode() 
         as this function just returns the data
     '''
+
     def validate(self, attrs):
         try:
             data = super().validate(attrs)
             user = self.user
             try:
-                user_profile = Profile.objects.get(email = user.get_username())
+                print(user.pk   )
+                user_profile = Profile.objects.get(user = user.pk)
             except Profile.DoesNotExist:
                 user.delete()
                 return {
@@ -157,6 +162,20 @@ class LoginUser(TokenObtainPairView):
         Since this is a class in which only post method is defined hence other requests will be automatically refused
         by django. 
     '''
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        
+        if (not request.data.__contains__("username")):
+            return ResponseWithCode({
+                "success":False,
+            },"Username Not given",400)
+        
+        if (not request.data.__contains__("password")):
+            return ResponseWithCode({
+                "success":False,
+            },"Password Not given",400)
+
+        return super().post(request, *args, **kwargs)
+
     serializer_class = LoginTokenSerializer
     
     
@@ -178,7 +197,7 @@ def authenticated(request:HttpRequest):
     try:
         user = request.user
         if type(user) is not AnonymousUser:
-            user_profile = Profile.objects.get(email = user.username)
+            user_profile = Profile.objects.get(user = user.pk)
             user_data = {}
             user_events = []
             if getUser == True:

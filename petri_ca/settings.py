@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
 import dj_database_url
 import os
@@ -28,7 +29,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-7%zrt&2hd#75^63w&229cop=$w5t_h0#!dox9qmofw=s%@&ju9'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = True
 
@@ -39,7 +40,7 @@ ALLOWED_HOSTS = [
     '10.32.3.173','127.0.0.1'
 ]
 CORS_ORIGIN_WHITELIST = [
-    'http://localhost:5173','http://10.32.3.173:5173'
+    'http://localhost:5173','http://10.32.3.173:5173'   
 ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # or 'django.contrib.sessions.backends.cache'
@@ -94,6 +95,14 @@ REST_FRAMEWORK = {
         'custom.authorizor.PetrichorJWTAuthentication',
     ],
 }
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5,days=30),
+}
+
+AUTHENTICATION_BACKENDS=[
+    "django.contrib.auth.backends.ModelBackend"
+]
 
 WSGI_APPLICATION = 'petri_ca.wsgi.application'
 

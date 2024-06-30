@@ -16,7 +16,7 @@ class Institute(models.Model):
 
 class Profile(models.Model):
     username = models.TextField()
-    email = models.EmailField(default=True,primary_key=True)
+    user = models.OneToOneField(User,primary_key=True,on_delete=models.CASCADE)
     phone = models.CharField(max_length=25)
     instituteID = models.CharField(null=True, max_length=255)
     gradYear = models.IntegerField(default=6969)
@@ -27,7 +27,7 @@ class Profile(models.Model):
         return self.username
 
 class CAProfile(models.Model):
-    email = models.ForeignKey(Profile,on_delete=models.CASCADE)
+    user = models.OneToOneField(Profile,on_delete=models.CASCADE)
     CACode = models.CharField(max_length=8)
     registration = models.IntegerField(default=0)
 
