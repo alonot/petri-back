@@ -13,4 +13,6 @@ urlpatterns = [
     path('events/apply/paid',views.apply_event_paid ,name="applyEventpaid"),
     path('events/apply/free',views.apply_event_free ,name="applyEventfree"),
     path('send_grievance',views.send_grievance,name="send_grievance"),
+    path('verifyCA/', views.verifyCA, name='verifyCA'),
+    path('unverifyCA/', views.unverifyCA, name='unverifyCA'),
 ]
