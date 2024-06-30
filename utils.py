@@ -1,6 +1,8 @@
 
 import json
 from django.core.mail import send_mail
+from django.conf import settings
+
 
 from app.models import Institute, Profile,TransactionTable
 from petri_ca import settings
@@ -12,7 +14,7 @@ from custom.authorizor import PetrichorJWTAuthentication
 Refreshserializer = TokenRefreshSerializer()
 PetrichorAuthenticator = PetrichorJWTAuthentication()
 
-AUTH_EXEMPT = ['/admin/','/internal/','/api/register/','/api/login/']
+AUTH_EXEMPT = ['/admin/','/internal/','/api/register/','/api/login/','/api/forget-password/','/api/change-password']
 
 # Helper functions
 def error_response(message):
@@ -93,6 +95,24 @@ def get_profile_events(user_email:str):
 
 def method_not_allowed():
     return ResponseWithCode({},"Method Not Allowed.Use Post")
+
+
+def send_forget_password_mail(email , token):
+    subject = 'Your forget password link'
+    message = f'Hi , Click on the link to reset your password http://127.0.0.1:8000/api/change-password/{token}/'
+    email_from = settings.EMAIL_HOST_USER
+    recipient_list = [email]
+    send_mail(subject , message , email_from , recipient_list)
+    return True
+
+
+def send_forget_password_mail(email , token):
+    subject = 'Your forget password link'
+    message = f'Hi , Click on the link to reset your password http://127.0.0.1:8000/api/change-password/{token}/'
+    email_from = settings.EMAIL_HOST_USER
+    recipient_list = [email]
+    send_mail(subject , message , email_from , recipient_list)
+    return True
 
 
 
