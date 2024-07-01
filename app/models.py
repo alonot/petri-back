@@ -16,18 +16,19 @@ class Institute(models.Model):
 
 class Profile(models.Model):
     username = models.TextField()
-    email = models.EmailField(default=True,primary_key=True)
+    user = models.OneToOneField(User,primary_key=True,on_delete=models.CASCADE)
     phone = models.CharField(max_length=25)
     instituteID = models.CharField(null=True, max_length=255)
     gradYear = models.IntegerField(default=6969)
     stream = models.TextField(null=True)
     joined = models.DateTimeField(auto_now_add=True)
+    forget_password_token = models.CharField(max_length=100 , default="")
 
     def __str__(self):
         return self.username
 
 class CAProfile(models.Model):
-    email = models.ForeignKey(Profile,on_delete=models.CASCADE)
+    user = models.OneToOneField(Profile,on_delete=models.CASCADE)
     CACode = models.CharField(max_length=8)
     registration = models.IntegerField(default=0)
 
@@ -55,6 +56,9 @@ class TransactionTable(models.Model):
     transaction_id = models.TextField(primary_key=True)
     verified = models.BooleanField()
     CACode = models.CharField(max_length=10, null=True)
+
+    def get_participants(self):
+        return TransactionTable.deserialize_emails(self.participants)
 
     @staticmethod
     def serialise_emails(emails: list[str]) -> str:

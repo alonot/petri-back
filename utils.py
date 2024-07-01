@@ -1,8 +1,10 @@
 
 import json
 from django.core.mail import send_mail
+from django.conf import settings
 
-from app.models import Institute, Profile
+
+from app.models import Institute, Profile,TransactionTable
 from petri_ca import settings
 from rest_framework.response import Response 
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
@@ -12,7 +14,7 @@ from custom.authorizor import PetrichorJWTAuthentication
 Refreshserializer = TokenRefreshSerializer()
 PetrichorAuthenticator = PetrichorJWTAuthentication()
 
-AUTH_EXEMPT = ['/internal/','/api/register/','/api/login/']
+AUTH_EXEMPT = ['/admin/','/internal/','/api/register/','/api/login/','/api/forget-password/','/api/change-password']
 
 # Helper functions
 def error_response(message):
@@ -21,6 +23,29 @@ def error_response(message):
 def success_response(message):
     return Response({"message": message}, status=200)
 
+def ResponseWithCode(data:dict,message:str,status=200)-> Response:
+    '''
+        returns a response after appending status and message to its data
+        as specified in readme.md
+    '''
+    data.update({
+        "status":status,
+        "message":message
+    })
+    return Response(data,status)
+
+
+def r500(msg: str) -> Response:
+    return Response({
+        'status': 500,
+        'message': msg
+    },500)
+
+def r200(msg: str) -> Response:
+    return Response({
+        'status': 200,
+        'message': msg
+    },200)
 
 def send_error_mail(name, data, e):
     '''
@@ -59,20 +84,36 @@ def get_profile_events(user_email:str):
     '''
     events=[]
     # to be Fixed
-    eventEntries=EventTable.objects.all() # type: ignore
+    eventEntries=TransactionTable.objects.all() # type: ignore
     for eventEntry in eventEntries:
-        if user_email in eventEntry.get_emails():
+        if user_email in eventEntry.get_participants():
             events.append({
-                "eventId":eventEntry.eventId,
+                "eventId":eventEntry.event_id,
                 "status":eventEntry.verified})
     return events
 
 
 def method_not_allowed():
-    return Response({
-            "status":405,
-            "message":"Method Not Allowed.Use POST"
-        },405)
+    return ResponseWithCode({},"Method Not Allowed.Use Post")
+
+
+def send_forget_password_mail(email , token):
+    subject = 'Your forget password link'
+    message = f'Hi , Click on the link to reset your password http://127.0.0.1:8000/api/change-password/{token}/'
+    email_from = settings.EMAIL_HOST_USER
+    recipient_list = [email]
+    send_mail(subject , message , email_from , recipient_list)
+    return True
+
+
+def send_forget_password_mail(email , token):
+    subject = 'Your forget password link'
+    message = f'Hi , Click on the link to reset your password http://127.0.0.1:8000/api/change-password/{token}/'
+    email_from = settings.EMAIL_HOST_USER
+    recipient_list = [email]
+    send_mail(subject , message , email_from , recipient_list)
+    return True
+
 
 
 

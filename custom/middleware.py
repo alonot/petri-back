@@ -46,8 +46,6 @@ class PetrichorAuthMiddleware(object):
             }
             token = None
             try:
-                
-                pass
                 user = PetrichorAuthenticator.authenticate(request)
                 if user:  # If we got some data here, then user is already authorized
                     resp_data['loggedIn'] = True
@@ -91,7 +89,7 @@ class PetrichorAuthMiddleware(object):
                 })
                 # if user is not logged then returning the response from here only. 
                 # The request does goes further to any middleware or the target view
-                return HttpResponse(json.dumps(resp_data),content_type='application/json',status=200)
+                return HttpResponse(json.dumps(resp_data),content_type='application/json',status=400)
             
 
 
@@ -102,7 +100,7 @@ class PetrichorAuthMiddleware(object):
         # the view is called.
 
         # if everything went correctly then we will append the log in details with the response
-        if not exempt:
+        if not exempt and hasattr(response,'data'):
             resp_data.update((response.data))
             response.data = resp_data
             response.content = json.dumps(response.data)
