@@ -18,19 +18,19 @@ class Profile(models.Model):
     username = models.TextField()
     user = models.OneToOneField(User,primary_key=True,on_delete=models.CASCADE)
     phone = models.CharField(max_length=25)
-    instituteID = models.CharField(null=True, max_length=255)
+    instituteID = models.ForeignKey(Institute,on_delete=models.SET_NULL,null=True, max_length=255)
     gradYear = models.IntegerField(default=6969)
     stream = models.TextField(null=True)
     joined = models.DateTimeField(auto_now_add=True)
-    forget_password_token = models.CharField(max_length=100 , default="")
 
     def __str__(self):
         return self.username
 
 class CAProfile(models.Model):
-    user = models.OneToOneField(Profile,on_delete=models.CASCADE)
-    CACode = models.CharField(max_length=8)
+    user = models.OneToOneField(User,on_delete=models.CASCADE)
+    CACode = models.CharField(max_length=8,unique=True)
     registration = models.IntegerField(default=0)
+
 
 
 class Extras(models.Model):
@@ -50,12 +50,12 @@ class Event(models.Model):
 EMAIL_SEPARATOR = '\n'
 
 class TransactionTable(models.Model):
-    event_id = models.ForeignKey(Event, on_delete=models.CASCADE, default="1")
-    user_id = models.TextField(default="")
+    event_id = models.ForeignKey(Event, on_delete=models.PROTECT,null=True)
+    user_id = models.ForeignKey(User,on_delete=models.PROTECT,null=True)
     participants = models.TextField()
     transaction_id = models.TextField(primary_key=True)
     verified = models.BooleanField()
-    CACode = models.CharField(max_length=10, null=True)
+    CACode = models.ForeignKey(CAProfile,on_delete=models.SET_NULL,max_length=10, null=True)
 
     def get_participants(self):
         return TransactionTable.deserialize_emails(self.participants)

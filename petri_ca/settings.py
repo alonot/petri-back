@@ -21,6 +21,8 @@ import dj_database_url
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+from dotenv import load_dotenv
+load_dotenv(os.path.join(BASE_DIR , "petri_ca",".env"))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -45,6 +47,10 @@ CORS_ORIGIN_WHITELIST = [
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # or 'django.contrib.sessions.backends.cache'
 SESSION_COOKIE_SECURE = not DEBUG  # Set to True if using HTTPS
+
+FORGET_SALT_KEY = os.environ.get("FORGET_SALT_KEY")
+FORGET_TOKEN_MAX_AGE = timedelta(minutes=5)
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -117,8 +123,6 @@ if DEBUG:
         }
     }
 else:
-    from dotenv import load_dotenv
-    load_dotenv(os.path.join(BASE_DIR , "petri_ca",".env"))
     DATABASES = {
         "default": dj_database_url.parse(os.environ.get("DATABASE_URL"))
     }

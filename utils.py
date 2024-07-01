@@ -2,6 +2,7 @@
 import json
 from django.core.mail import send_mail
 from django.conf import settings
+from django.core.signing import TimestampSigner,SignatureExpired,BadSignature
 
 
 from app.models import Institute, Profile,TransactionTable
@@ -13,6 +14,7 @@ from custom.authorizor import PetrichorJWTAuthentication
 
 Refreshserializer = TokenRefreshSerializer()
 PetrichorAuthenticator = PetrichorJWTAuthentication()
+PetrichroSigner = TimestampSigner(salt=settings.FORGET_SALT_KEY)
 
 AUTH_EXEMPT = ['/admin/','/internal/','/api/register/','/api/login/','/api/forget-password/','/api/change-password']
 
@@ -65,16 +67,11 @@ def get_profile_data(user_profile:Profile):
     '''
     user_data = {}
     user_data['username'] = user_profile.username
+    user_data['email'] = user_profile.user.get_username()
     user_data['phone'] = user_profile.phone
     user_data['stream'] = user_profile.stream
-    user_data['gradYear'] = user_profile.gradYear
-    int_id = user_profile.instituteID
-    try:
-        institute = Institute.objects.get(pk = int_id)
-        institute = institute.instiName
-    except Institute.DoesNotExist:
-        institute = ""     
-    user_data['institute'] = institute
+    user_data['gradYear'] = user_profile.gradYear    
+    user_data['institute'] = user_profile.instituteID.instiName
     return user_data
     
 def get_profile_events(user_email:str):
@@ -88,7 +85,7 @@ def get_profile_events(user_email:str):
     for eventEntry in eventEntries:
         if user_email in eventEntry.get_participants():
             events.append({
-                "eventId":eventEntry.event_id,
+                "eventId":eventEntry.event_id.event_id,
                 "status":eventEntry.verified})
     return events
 
@@ -114,6 +111,13 @@ def send_forget_password_mail(email , token):
     send_mail(subject , message , email_from , recipient_list)
     return True
 
+
+def get_forget_token(email):
+    return PetrichroSigner.sign(email)
+
+def get_email_from_token(token:str):
+    token = PetrichroSigner.unsign(token,max_age=settings.FORGET_TOKEN_MAX_AGE)
+    return token
 
 
 

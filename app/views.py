@@ -1,4 +1,3 @@
-from collections import OrderedDict
 import time
 from django.conf import settings
 from django.forms import ValidationError
@@ -11,10 +10,11 @@ from rest_framework.response import Response
 from django.http import HttpRequest
 from django.core.mail import send_mail
 from django.contrib.auth.models import AnonymousUser
+from django.core.signing import SignatureExpired,BadSignature
 
-from utils import ResponseWithCode, get_profile_data, get_profile_events,\
+from utils import ResponseWithCode, get_email_from_token, get_forget_token, get_profile_data, get_profile_events,\
 r500,send_error_mail, method_not_allowed , send_forget_password_mail
-from .models import Institute, Profile, TransactionTable,Event
+from .models import Institute, Profile, TransactionTable,Event,CAProfile
 from django.db.utils import IntegrityError
 import inspect
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -52,7 +52,7 @@ def signup(request):
                 "success":False,
                 "username":username
             },
-            "Email already registered",200)
+            "Email already registered",400)
         except User.DoesNotExist:
             try:
                 new_user = User(username=email)
@@ -76,13 +76,13 @@ def signup(request):
                 user_profile = Profile(username=username, 
                                     user=new_user,
                                     phone=phone,
-                                    instituteID=institute.pk,
+                                    instituteID=institute,
                                     gradYear=gradyear,
                                     stream=stream)
-                # print("lo")
+                
                 # saving the profile and user. If any of above steps fails the User/ Profile will not be created
                 user_profile.save()
-                # print("p")
+                
                 # print("User Created")
                 return ResponseWithCode({
                     "success":True,
@@ -98,55 +98,18 @@ def signup(request):
                 # send_error_mail(inspect.stack()[0][3], request.data, e)  
                 r500("Something failed")
 
+    except KeyError as e:
+        return r500("Data received does not contains all the required fields")
+
+
     except Exception as e:
         send_error_mail(inspect.stack()[0][3], request.data, e)
         return r500("Something Bad Happened")
-    
-
-
-@api_view(['POST'])
-def ChangePassword(request , token):
-    '''
-        Changes Password
-    '''
-    if request.method != 'POST':
-        return method_not_allowed()
-    
-    try:
-        profile_obj = Profile.objects.filter(forget_password_token = token).first()
-       
-        data = request.data 
-        new_password = data['new_password']
-        confirm_password = data['confirm_password']
-
-        if new_password!=confirm_password:
-            return Response({
-                'status': 404,
-                'message': "Both passwords should be same!!!",
-                "username": None
-            },404)
-        
-        email = profile_obj.email
-        user_obj = User.objects.get(username = email)
-        user_obj.set_password(new_password)
-        user_obj.save()
-        return Response({
-                'status': 200,
-                'message': "Successfully Changed",
-                "username": profile_obj.username
-            },200)
-    
-    except Exception as e:
-        return Response({
-                'status': 404,
-                'message': "Invalid URL",
-                "username": None
-            },404)
 
 
 
 @api_view(['POST'])
-def ForgetPassword(request):
+def ForgetPassword(request:HttpRequest):
     '''
         Reset Password
 
@@ -154,8 +117,13 @@ def ForgetPassword(request):
     if request.method != 'POST':
         return method_not_allowed()
     try:
-        data = request.data
-        email = data['email'].strip()
+        data:dict = request.data
+        if data.__contains__('email'):
+            email = data['email'].strip()
+        else:
+            return r500("Email not received")
+
+
 
         try:
             User.objects.get(username=email)
@@ -166,15 +134,7 @@ def ForgetPassword(request):
                 "username": None
             },404)
         
-        token = str(uuid.uuid4()) # Generates Token
-        try:
-            profile_obj=Profile.objects.get(email = email)
-            profile_obj.forget_password_token = token
-            profile_obj.save()
-
-        except Exception as e:
-            send_error_mail(inspect.stack()[0][3], request.data, e)
-            return r500("Something Failed")
+        token = get_forget_token(email)# Generates Token, It lasts for 5 mins
         
         send_forget_password_mail(email , token)
         
@@ -191,7 +151,7 @@ def ForgetPassword(request):
 
 
 @api_view(['POST'])
-def ChangePassword(request , token):
+def ChangePassword(request:HttpRequest , token:str):
     '''
         Changes Password
     '''
@@ -199,11 +159,13 @@ def ChangePassword(request , token):
         return method_not_allowed()
     
     try:
-        profile_obj = Profile.objects.filter(forget_password_token = token).first()
        
         data = request.data 
-        new_password = data['new_password']
-        confirm_password = data['confirm_password']
+        if data.__contains__('new_password') and data.__contains__('confirm_password'):
+            new_password = data['new_password']
+            confirm_password = data['confirm_password']
+        else:
+            return r500("Passwords not received")
 
         if new_password!=confirm_password:
             return Response({
@@ -211,68 +173,27 @@ def ChangePassword(request , token):
                 'message': "Both passwords should be same!!!",
                 "username": None
             },404)
-        
-        email = profile_obj.email
+        try:
+            email = get_email_from_token(token)
+        except SignatureExpired:
+            return r500("Token expired")
+        except BadSignature:
+            return r500("Invalid Token")
+
         user_obj = User.objects.get(username = email)
         user_obj.set_password(new_password)
         user_obj.save()
-        return Response({
-                'status': 200,
-                'message': "Successfully Changed",
-                "username": profile_obj.username
-            },200)
+        return ResponseWithCode({
+            "success":True,
+        },"Password changed successfully",200)
     
     except Exception as e:
+        # send_error_mail(inspect.stack()[0][3], request.data, e)
         return Response({
                 'status': 404,
                 'message': "Invalid URL",
                 "username": None
             },404)
-
-
-
-@api_view(['POST'])
-def ForgetPassword(request):
-    '''
-        Reset Password
-
-    '''
-    if request.method != 'POST':
-        return method_not_allowed()
-    try:
-        data = request.data
-        email = data['email'].strip()
-
-        try:
-            User.objects.get(username=email)
-        except User.DoesNotExist:
-            return Response({
-                'status': 404,
-                'message': "No User found with this Email",
-                "username": None
-            },404)
-        
-        token = str(uuid.uuid4()) # Generates Token
-        try:
-            profile_obj=Profile.objects.get(email = email)
-            profile_obj.forget_password_token = token
-            profile_obj.save()
-
-        except Exception as e:
-            send_error_mail(inspect.stack()[0][3], request.data, e)
-            return r500("Something Failed")
-        
-        send_forget_password_mail(email , token)
-        
-        return Response({
-            'status' : 200,
-            'message':'An email is sent'
-        })
-
-    except Exception as e:
-        # print(e)
-        # send_error_mail(inspect.stack()[0][3], request.data, e)
-        return r500("Something Bad Happened")
 
 
 
@@ -297,10 +218,9 @@ class LoginTokenSerializer(TokenObtainPairSerializer):
         try:
             data = super().validate(attrs)
             user = self.user
-            try:
-                print(user.pk   )
-                user_profile = Profile.objects.get(user = user.pk)
-            except Profile.DoesNotExist:
+            if hasattr(user,'profile'):
+                user_profile:Profile = user.profile
+            else:
                 user.delete()
                 return {
                     "status":400,
@@ -360,16 +280,17 @@ def authenticated(request:HttpRequest):
     if request.method != 'POST':
         return method_not_allowed()
 
-    try:
+    data = request.data
+    if data.__contains__('getUser') and data.__contains__('getEvents'):
         getUser = request.data["getUser"]
         getEvent = request.data["getEvents"]
-    except Exception as e:
+    else:
         return ResponseWithCode({"success":False},'Data not sent as Required',500)
 
     try:
         user = request.user
         if type(user) is not AnonymousUser:
-            user_profile = Profile.objects.get(user = user.pk)
+            user_profile:Profile = user.profile
             user_data = {}
             user_events = []
             if getUser == True:
@@ -409,9 +330,10 @@ def get_event_data(request):
 
         if data is None:
             return r500("invalid form")
-        try:
+        
+        if data.__contains__('id'):
             event_id = data["id"]
-        except KeyError as e:
+        else:
             return r500("Send an eventID")
         
         try:
@@ -438,9 +360,12 @@ def send_grievance(request: HttpRequest):
         if isinstance(data, Empty) or data is None:
             return r500("Invalid Form")
         
-        name = data['name'] 
-        email = data['email'] 
-        content = data['content'] 
+        if data.__contains__('name') and data.__contains__('email') and data.__contains__('content'):
+            name = data['name'] 
+            email = data['email'] 
+            content = data['content'] 
+        else:
+            return r500("Data not received as required")
 
         send_mail(
             subject=f"WEBSITE MAIL: Grievance from '{name}'",
@@ -472,44 +397,55 @@ def apply_event_paid(request: HttpRequest):
         
 
         try:
-            user_id = data['user_id']
             participants = data['participants']
             event_id = data['eventId'].strip()
             transactionId = data['transactionID'].strip()
             CAcode = data['CAcode'].strip()
         except KeyError:
             return r500("Missing required fields: participants, eventId, and transactionId")
-        
+
+        # Check if participants' emails are from IIT Palakkad
+        verified=False
+        if all(map(lambda x: x.endswith("smail.iitpkd.ac.in"), participants)): 
+            verified=True
+            transactionId=f"IIT Palakkad Student+{time.time()}"
+
+        # Check for duplicate transaction ID
+        if TransactionTable.objects.filter(transactionId=transactionId).exists():
+            return r500("Duplicate transaction ID used for another event")
+
         try:
-            # Check if participants' emails are from IIT Palakkad
-            verified=False
-            if all(map(lambda x: x.endswith("smail.iitpkd.ac.in"), participants)): 
-                verified=True
-                transactionId=f"IIT Palakkad Student+{time.time()}"
+            event = Event.objects.get(event_id = event_id)
+        except Event.DoesNotExist:
+            return r500("No event exists with given event_id")
+        
+        user = request.user
+        if isinstance(user,AnonymousUser):
+            return r500("Some error occured")
+        ca_profile = None
+        try:
+            if CAcode is not "null":
+                ca_profile = CAProfile.objects.get(CACode = CAcode)
+        except User.DoesNotExist:
+            return ResponseWithCode({"success":False},"CA user not found",439)  # frontend need to check for this code, and display appropiate message
+        
 
-            # Check for duplicate transaction ID
-            if TransactionTable.objects.filter(transactionId=transactionId).exists():
-                return r500("Duplicate transaction ID used for another event")
+        # Create a new event record
+        eventpaidTableObject = TransactionTable(
+            event_id=event,
+            user_id = user,
+            participants= TransactionTable.serialise_emails(participants),
+            transaction_id=transactionId,
+            verified=verified,
+            CACode=ca_profile
+        )
 
 
-
-            # Create a new event record
-            eventpaidTableObject = TransactionTable(
-                event_id=event_id,
-                user_id = user_id,
-                participants= TransactionTable.serialise_emails(participants),
-                transaction_id=transactionId,
-                verified=verified,
-                CACode=CAcode
-            )
-
-
-            eventpaidTableObject.save()
-            return ResponseWithCode({
-                "success":True
-            },"Event applied successfully")
-        except Exception as e:
-            return r500("Unexpected error occurred while processing the event application")
+        eventpaidTableObject.save()
+        return ResponseWithCode({
+            "success":True
+        },"Event applied successfully")
+    
     except Exception as e:
         return r500("Unexpected error occurred")
 
@@ -523,7 +459,7 @@ def apply_event_free(request: HttpRequest):
 
     try:
 
-        user_id = data['user_id']
+        user_id = data['user_id'].strip()
         participants = data['participants']
         event_id = data['eventId'].strip()
 
@@ -533,15 +469,24 @@ def apply_event_free(request: HttpRequest):
     try:
         transaction_id = f"{user_id}+free+{time.time()}"
 
+        try:
+            event = Event.objects.get(event_id = event_id)
+        except Event.DoesNotExist:
+            return r500("No event exists with given event_id")
+        
+        try:
+            user = User.objects.get(username = user_id)
+        except User.DoesNotExist:
+            return r500("No user exists with given user_id")
     
 
         # Create a new event record
         eventfreeTableObject = TransactionTable(
-        event_id=event_id,
-        user_id = user_id,
-        participants=TransactionTable.serialise_emails(participants),
-        transaction_id = transaction_id,
-        verified=True
+            event_id=event,
+            user_id = user,
+            participants=TransactionTable.serialise_emails(participants),
+            transaction_id = transaction_id,
+            verified=True
         )
 
         eventfreeTableObject.save()

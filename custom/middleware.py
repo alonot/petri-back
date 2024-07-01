@@ -76,7 +76,8 @@ class PetrichorAuthMiddleware(object):
             except KeyError:
                 resp_data = {
                     "success":False,
-                    "message":"Refresh token not present"
+                    "message":"Refresh token not present",
+                    "status":400
                 }
                 # if user is not logged then returning the response from here only. 
                 # The request does goes further to any middleware or the target view
@@ -86,6 +87,7 @@ class PetrichorAuthMiddleware(object):
                 resp_data.update({
                     "success":False,
                     "message":"Not Logged in",
+                    "status":400
                 })
                 # if user is not logged then returning the response from here only. 
                 # The request does goes further to any middleware or the target view
