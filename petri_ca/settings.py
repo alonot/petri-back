@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
 import dj_database_url
 import os
@@ -39,7 +40,7 @@ ALLOWED_HOSTS = [
     '10.32.3.173','127.0.0.1'
 ]
 CORS_ORIGIN_WHITELIST = [
-    'http://localhost:5173','http://10.32.3.173:5173'
+    'http://localhost:5173','http://10.32.3.173:5173'   
 ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # or 'django.contrib.sessions.backends.cache'
@@ -95,12 +96,19 @@ REST_FRAMEWORK = {
     ],
 }
 
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5,days=30),
+}
+
+AUTHENTICATION_BACKENDS=[
+    "django.contrib.auth.backends.ModelBackend"
+]
+
 WSGI_APPLICATION = 'petri_ca.wsgi.application'
 
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
 if DEBUG:
     DATABASES = {
         'default': {
@@ -109,11 +117,11 @@ if DEBUG:
         }
     }
 else:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(BASE_DIR , "petri_ca",".env"))
     DATABASES = {
-        "default": dj_database_url.parse("postgresql://alonot:okiPkeWaUUE7eEKq7U0Z5Uy4RGOtXJhz@dpg-cpsl9s56l47c73e81ukg-a.oregon-postgres.render.com/petridata")
-        # "default": dj_database_url.parse(os.environ.get("DATABASE_URL"))
+        "default": dj_database_url.parse(os.environ.get("DATABASE_URL"))
     }
-
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
