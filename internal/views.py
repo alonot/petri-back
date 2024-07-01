@@ -34,19 +34,23 @@ def getEventUsers(request):
 def verifyTR(request):
     if request.method == 'POST':
         data = json.loads(request.body)
-        #Here if no transaction id then it will start with a default of hte empty list 
+        # Here if no transaction id then it will start with a default of the empty list
         transaction_ids = data.get('transaction_ids', [])
         
+        failed_transactions = []
+
         for transaction_id in transaction_ids:
             try:
                 transaction = TransactionTable.objects.get(transaction_id=transaction_id)
                 transaction.verified = True
                 transaction.save()
             except TransactionTable.DoesNotExist:
-                continue
+                failed_transactions.append(transaction_id)
         
-        return JsonResponse({'status': 'success'})
-
+        return JsonResponse({
+            'status': 'success',
+            'failed_transactions': failed_transactions
+        })
 
 @api_view(['GET'])
 def getTR(request):
