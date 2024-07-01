@@ -31,7 +31,10 @@ class CAProfile(models.Model):
     CACode = models.CharField(max_length=8,unique=True)
     registration = models.IntegerField(default=0)
 
-
+class UserRegistrations(models.Model):
+    user = models.OneToOneField(User,on_delete=models.SET_NULL,null=True)
+    email = models.EmailField(primary_key=True)  # use Transaction table's static functions to serialize or deserialize
+    transactionIds = models.TextField(default="")
 
 class Extras(models.Model):
     extra_id = models.AutoField(primary_key=True)  # Here I have set this to the autofild mode whcih will  auto-generate primary key
@@ -46,6 +49,7 @@ class Event(models.Model):
     fee = models.IntegerField(default=0)
     minMember = models.IntegerField(default=1)
     maxMember = models.IntegerField(default=1)
+    isTeam = models.BooleanField(default = False)
     
 EMAIL_SEPARATOR = '\n'
 

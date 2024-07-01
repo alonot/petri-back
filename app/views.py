@@ -14,18 +14,14 @@ from django.core.signing import SignatureExpired,BadSignature
 
 from utils import ResponseWithCode, get_email_from_token, get_forget_token, get_profile_data, get_profile_events,\
 r500,send_error_mail, method_not_allowed , send_forget_password_mail,error_response
-from .models import Institute, Profile, TransactionTable,Event,CAProfile
+from .models import EMAIL_SEPARATOR, Institute, Profile, TransactionTable,Event,CAProfile,UserRegistrations
 from django.db.utils import IntegrityError
 import inspect
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
-
-from resp import r500, r200
 from django.conf import settings
-from django.core.mail import EmailMessage, send_mail
+from django.core.mail import send_mail
 
-
-import uuid
 
 TokenSerializer = TokenObtainPairSerializer()
 
@@ -86,6 +82,17 @@ def signup(request):
                 
                 # saving the profile and user. If any of above steps fails the User/ Profile will not be created
                 user_profile.save()
+
+                user_registration = UserRegistrations.objects.filter(email = email).first()
+                if user_registration is not None:
+                    user_registration.user = new_user
+                    user_registration.save()
+                else:
+                    UserRegistrations.objects.create(
+                        user = new_user,
+                        email = email,
+                        transactionIds =""
+                    )
                 
                 # print("User Created")
                 return ResponseWithCode({
@@ -300,7 +307,7 @@ def authenticated(request:HttpRequest):
             if getUser == True:
                 user_data = get_profile_data(user_profile)
             if getEvent == True:
-                user_events = get_profile_events(user.get_username())
+                user_events = get_profile_events(user)
 
             return ResponseWithCode({
                 'success':True,
@@ -432,7 +439,7 @@ def apply_event_paid(request: Request):
             return r500("Some error occured")
         ca_profile = None
         try:
-            if CAcode is not "null":
+            if CAcode != "null":
                 ca_profile = CAProfile.objects.get(CACode = CAcode)
         except User.DoesNotExist:
             return ResponseWithCode({"success":False},"CA user not found",439)  # frontend need to check for this code, and display appropiate message
@@ -447,6 +454,17 @@ def apply_event_paid(request: Request):
             verified=verified,
             CACode=ca_profile
         )
+
+        for participant in participants:
+            user_registration:UserRegistrations = UserRegistrations.objects.filter(email = participant).first()
+            if user_registration is not None:
+                user_registration.transactionIds = user_registration.transactionIds + EMAIL_SEPARATOR + transactionId
+                user_registration.asave()
+            else:
+                UserRegistrations.objects.acreate(
+                    user = None, email = participant, 
+                    transactionIds = transactionId
+                )
 
 
         eventpaidTableObject.save()
@@ -497,6 +515,18 @@ def apply_event_free(request: HttpRequest):
             transaction_id = transaction_id,
             verified=True
         )
+
+
+        for participant in participants:
+            user_registration:UserRegistrations = UserRegistrations.objects.filter(email = participant).first()
+            if user_registration is not None:
+                user_registration.transactionIds = user_registration.transactionIds + EMAIL_SEPARATOR + transaction_id
+                user_registration.asave()
+            else:
+                UserRegistrations.objects.acreate(
+                    user = None, email = participant, 
+                    transactionIds = transaction_id
+                )
 
         eventfreeTableObject.save()
         return ResponseWithCode({

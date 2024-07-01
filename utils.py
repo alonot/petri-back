@@ -4,8 +4,8 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.core.signing import TimestampSigner,SignatureExpired,BadSignature
 
-
-from app.models import Institute, Profile,TransactionTable
+from django.contrib.auth.models import User
+from app.models import Event, Institute, Profile,TransactionTable
 from petri_ca import settings
 from rest_framework.response import Response 
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
@@ -74,19 +74,22 @@ def get_profile_data(user_profile:Profile):
     user_data['institute'] = user_profile.instituteID.instiName
     return user_data
     
-def get_profile_events(user_email:str):
+def get_profile_events(user:User):
     '''
         returns the eventIds of events in which this user has registered
         NOTE- Any None handled error raised by this functions is/must be handled by the caller function.
     '''
-    events=[]
-    # to be Fixed
-    eventEntries=TransactionTable.objects.all() # type: ignore
-    for eventEntry in eventEntries:
-        if user_email in eventEntry.get_participants():
+    events = []
+    user_registration = user.userregistrations
+    trIds=TransactionTable.deserialize_emails(user_registration.transactionIds)
+    for trId in trIds:
+        transaction = TransactionTable.objects.filter(transaction_id = trId).first()
+        if transaction is not None:
             events.append({
-                "eventId":eventEntry.event_id.event_id,
-                "status":eventEntry.verified})
+                "eventId": transaction.event_id,
+                "verified": transaction.verified
+            })
+
     return events
 
 

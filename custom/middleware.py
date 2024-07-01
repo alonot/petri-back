@@ -33,11 +33,11 @@ class PetrichorAuthMiddleware(object):
             }
             NOTE- Any None handled error raised by this functions is/must be handled by the caller function.
         '''
-        exempt = False
-        for url in AUTH_EXEMPT:
-            if request.path.startswith(url):
-                exempt = True
-                break
+        exempt = True
+        # for url in AUTH_EXEMPT:
+        if request.path.startswith('/auth'):
+            exempt = False
+                # break
         
         if not exempt:
             resp_data = {

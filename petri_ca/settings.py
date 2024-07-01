@@ -28,7 +28,7 @@ load_dotenv(os.path.join(BASE_DIR , "petri_ca",".env"))
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-7%zrt&2hd#75^63w&229cop=$w5t_h0#!dox9qmofw=s%@&ju9'
+SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -39,7 +39,7 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173','http://10.32.3.173:5173'
 ]
 ALLOWED_HOSTS = [
-    '10.32.3.173','127.0.0.1'
+    '10.32.3.173','127.0.0.1','petrichor.events'
 ]
 CORS_ORIGIN_WHITELIST = [
     'http://localhost:5173','http://10.32.3.173:5173'   
