@@ -36,13 +36,13 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = True
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5173','http://10.32.3.173:5173'
+    'http://localhost:5173',
 ]
 ALLOWED_HOSTS = [
     '10.32.3.173','127.0.0.1','petrichor.events'
 ]
 CORS_ORIGIN_WHITELIST = [
-    'http://localhost:5173','http://10.32.3.173:5173'   
+    'http://localhost:5173',   
 ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # or 'django.contrib.sessions.backends.cache'
