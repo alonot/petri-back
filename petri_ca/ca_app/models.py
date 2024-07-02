@@ -15,7 +15,7 @@ class CAUser(models.Model):
 
         return random_str
 
-    def save(self, *args, **kwargs):        #THis will check if the string is not generated for the user then it will generate one more for the user just to verify that the string is generated 
+    def save(self, *args, **kwargs):      #This will genereate teh random string if the strign is not genereatefd just to verify that the string is generated 
         # If the random string is not set, generate one
         if not self.random_string:
             self.random_string = self.generate_random_string()
