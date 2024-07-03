@@ -114,6 +114,13 @@ def send_forget_password_mail(email , token):
     send_mail(subject , message , email_from , recipient_list)
     return True
 
+def send_delete_transaction_mail(email , event_name):
+    subject = 'Transaction not verified!'
+    message = f'Hi , Your transaction_id is not verified for the event {event_name}. Kindly contact admin of Petrichor '
+    email_from = settings.EMAIL_HOST_USER
+    recipient_list = [email]
+    send_mail(subject , message ,email_from , recipient_list)
+    return True
 
 def get_forget_token(email):
     return PetrichroSigner.sign(email)
