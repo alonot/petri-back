@@ -14,9 +14,10 @@ from custom.authorizor import PetrichorJWTAuthentication
 
 Refreshserializer = TokenRefreshSerializer()
 PetrichorAuthenticator = PetrichorJWTAuthentication()
-PetrichroSigner = TimestampSigner(salt=settings.FORGET_SALT_KEY)
+PetrichroSigner = TimestampSigner(key=settings.FORGET_KEY,salt=settings.FORGET_SALT_KEY)
 
 AUTH_EXEMPT = ['/admin/','/internal/','/api/register/','/api/login/','/api/forget-password/','/api/change-password']
+# this is not used now.
 
 # Helper functions
 def error_response(message):

@@ -31,7 +31,7 @@ load_dotenv(os.path.join(BASE_DIR , "petri_ca",".env"))
 SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
@@ -50,6 +50,7 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # or 'django.contrib.ses
 SESSION_COOKIE_SECURE = not DEBUG  # Set to True if using HTTPS
 
 FORGET_SALT_KEY = os.environ.get("FORGET_SALT_KEY")
+FORGET_KEY = os.environ.get("FORGET_KEY")
 FORGET_TOKEN_MAX_AGE = timedelta(minutes=5)
 
 # Application definition
@@ -104,6 +105,7 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
+    # sets the lifetime of the access token generated on login
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5,days=30),
 }
 
