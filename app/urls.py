@@ -6,7 +6,10 @@ urlpatterns = [
     # path('login/',views.login_user,name="login"),
     path('login/',views.LoginUser.as_view(),name="login"),
     path('register/', views.signup, name="signup"),
-    
+    path('forget-password/',views.ForgetPassword , name='forgetpassword'),
+    path('change-password/<token>/',views.ChangePassword , name="changepassword"),
+    ####
+
     ####
     path('auth/',views.authenticated,name='checks'),
     path('auth/event/',views.get_event_data,name="getEvent"),    
@@ -15,10 +18,11 @@ urlpatterns = [
     ###
     path('send_grievance',views.send_grievance,name="send_grievance"),
 
-    path('verifyCA/', views.verifyCA, name='verifyCA'),
-    path('unverifyCA/', views.unverifyCA, name='unverifyCA'),
-
-    path('forget-password/',views.ForgetPassword , name='forgetpassword'),
-    path('change-password/<token>/',views.ChangePassword , name="changepassword"),
+    ###
+    path('auth/CA/create/', views.create_ca_user, name='create_ca_user'),
+    # path('auth/CA/get/', views.create_ca_user, name='get_ca_user'),
+    path('CA/verify/', views.verifyCA, name='verifyCA'),
+    path('CA/unverify/', views.unverifyCA, name='unverifyCA'),
+    ###
 
 ]

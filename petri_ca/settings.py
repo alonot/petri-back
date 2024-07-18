@@ -33,16 +33,17 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 CORS_ALLOW_CREDENTIALS = True
-CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = False
+CSRF_COOKIE_HTTPONLY = False
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5173',
+    'http://localhost:5173', 'https://petrichor.events'
 ]
 ALLOWED_HOSTS = [
-    '10.32.3.173','127.0.0.1','petrichor.events'
+    'localhost','127.0.0.1', 'https://petrichor.events', '.vercel.app'
 ]
 CORS_ORIGIN_WHITELIST = [
-    'http://localhost:5173',   
+    'http://localhost:5173', 'https://petrichor.events'
 ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # or 'django.contrib.sessions.backends.cache'
@@ -71,10 +72,10 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'custom.middleware.PetrichorAuthMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
 

@@ -1,4 +1,5 @@
 import datetime
+import uuid
 from django.db import models
 from django.contrib.auth import get_user_model
 
@@ -27,9 +28,25 @@ class Profile(models.Model):
         return self.username
 
 class CAProfile(models.Model):
-    user = models.OneToOneField(User,on_delete=models.CASCADE)
+    user = models.OneToOneField(User,on_delete=models.CASCADE,primary_key=True)
     CACode = models.CharField(max_length=8,unique=True)
-    registration = models.IntegerField(default=0)
+    registration = models.IntegerField(default=-1)
+
+    def generate_random_string(self):
+        # Generate a unique random string
+        CACode = uuid.uuid4().hex[:6]
+
+        # Ensure the random string is unique
+        while CAProfile.objects.filter(CACode=CACode).exists():
+            CACode = uuid.uuid4().hex[:6]
+
+        return CACode
+
+    def save(self, *args, **kwargs):      #This will genereate teh random string if the strign is not genereatefd just to verify that the string is generated 
+        # If the random string is not set, generate one
+        if not self.CACode:
+            self.CACode = self.generate_random_string()
+        super().save(*args, **kwargs)
 
 class UserRegistrations(models.Model):
     user = models.OneToOneField(User,on_delete=models.SET_NULL,null=True)

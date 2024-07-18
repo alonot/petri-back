@@ -39,6 +39,7 @@ def ResponseWithCode(data:dict,message:str,status=200)-> Response:
 
 def r500(msg: str) -> Response:
     return Response({
+        "success":False,
         'status': 500,
         'message': msg
     },500)
@@ -108,12 +109,19 @@ def send_forget_password_mail(email , token):
 
 def send_forget_password_mail(email , token):
     subject = 'Your forget password link'
-    message = f'Hi , Click on the link to reset your password http://127.0.0.1:8000/api/change-password/{token}/'
+    message = f'Hi , Click on the link to reset your password http://localhost:5173/change-password/{token}/'
     email_from = settings.EMAIL_HOST_USER
     recipient_list = [email]
     send_mail(subject , message , email_from , recipient_list)
     return True
 
+def send_delete_transaction_mail(email , event_name):
+    subject = 'Transaction not verified!'
+    message = f'Hi , Your transaction_id is not verified for the event {event_name}. Kindly contact admin of Petrichor '
+    email_from = settings.EMAIL_HOST_USER
+    recipient_list = [email]
+    send_mail(subject , message ,email_from , recipient_list)
+    return True
 
 def get_forget_token(email):
     return PetrichroSigner.sign(email)

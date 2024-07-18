@@ -4,6 +4,7 @@ from django.forms import ValidationError
 from rest_framework.request import Empty, Request
 from django.contrib.auth.models import User
 from rest_framework.decorators  import api_view
+from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework.exceptions import AuthenticationFailed
 
 from rest_framework.response import Response 
@@ -59,7 +60,7 @@ def signup(request):
                 new_user.set_password(pass1)
                 new_user.is_active = True
             except IntegrityError as e: # Email alreeady exists
-                # send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
+                send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
                 return r500('Email already exists')
             
             try:
@@ -94,19 +95,19 @@ def signup(request):
                         transactionIds =""
                     )
                 
-                # print("User Created")
+                print("User Created")
                 return ResponseWithCode({
                     "success":True,
                     "username":username
                 },"success")
             
             except IntegrityError as e:
-                # send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
+                send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
                 new_user.delete()
                 return r500("User already exists. Try something different.")
             except Exception as e:
                 new_user.delete()
-                # send_error_mail(inspect.stack()[0][3], request.data, e)  
+                send_error_mail(inspect.stack()[0][3], request.data, e)  
                 r500("Something failed")
 
     except KeyError as e:
@@ -114,6 +115,7 @@ def signup(request):
 
 
     except Exception as e:
+        print(e)
         send_error_mail(inspect.stack()[0][3], request.data, e)
         return r500("Something Bad Happened")
 
@@ -148,15 +150,14 @@ def ForgetPassword(request:HttpRequest):
         token = get_forget_token(email)# Generates Token, It lasts for 5 mins
         
         send_forget_password_mail(email , token)
-        
-        return Response({
-            'status' : 200,
-            'message':'An email is sent'
-        })
+
+        return ResponseWithCode({
+            "success":True
+        },"An email is sent")
 
     except Exception as e:
         # print(e)
-        # send_error_mail(inspect.stack()[0][3], request.data, e)
+        send_error_mail(inspect.stack()[0][3], request.data, e)
         return r500("Something Bad Happened")
     
 
@@ -172,18 +173,11 @@ def ChangePassword(request:HttpRequest , token:str):
     try:
        
         data = request.data 
-        if data.__contains__('new_password') and data.__contains__('confirm_password'):
+        if data.__contains__('new_password'):
             new_password = data['new_password']
-            confirm_password = data['confirm_password']
         else:
             return r500("Passwords not received")
-
-        if new_password!=confirm_password:
-            return Response({
-                'status': 404,
-                'message': "Both passwords should be same!!!",
-                "username": None
-            },404)
+        
         try:
             email = get_email_from_token(token)
         except SignatureExpired:
@@ -199,7 +193,7 @@ def ChangePassword(request:HttpRequest , token:str):
         },"Password changed successfully",200)
     
     except Exception as e:
-        # send_error_mail(inspect.stack()[0][3], request.data, e)
+        send_error_mail(inspect.stack()[0][3], request.data, e)
         return Response({
                 'status': 404,
                 'message': "Invalid URL",
@@ -224,7 +218,7 @@ class LoginTokenSerializer(TokenObtainPairSerializer):
         NOTE FOR DEVS: This function must not use ResponseWithCode() 
         as this function just returns the data
     '''
-
+    
     def validate(self, attrs):
         try:
             data = super().validate(attrs)
@@ -266,7 +260,8 @@ class LoginUser(TokenObtainPairView):
         by django. 
     '''
     def post(self, request: Request, *args, **kwargs) -> Response:
-        
+        from django.middleware.csrf import get_token
+        print(get_token(request))
         if (not request.data.__contains__("username")):
             return ResponseWithCode({
                 "success":False,
@@ -306,6 +301,18 @@ def authenticated(request:HttpRequest):
             user_events = []
             if getUser == True:
                 user_data = get_profile_data(user_profile)
+                ca_details = {
+                    "CACode":"",
+                    "registrations":-1
+                }
+                if hasattr(user,'caprofile'):
+                    ca_details = {
+                        "CACode":user.caprofile.CACode,
+                        "registrations":user.caprofile.registration
+                    }
+
+                user_data.update(ca_details)
+
             if getEvent == True:
                 user_events = get_profile_events(user)
 
@@ -362,40 +369,6 @@ def get_event_data(request):
     except Exception as e:
             send_error_mail(inspect.stack()[0][3], request.data, e)
             return r500("Something Bad Happened")
-
-
-@api_view(['POST'])
-def send_grievance(request: HttpRequest):
-    try:
-        data = request.data
-        if isinstance(data, Empty) or data is None:
-            return r500("Invalid Form")
-        
-        if data.__contains__('name') and data.__contains__('email') and data.__contains__('content'):
-            name = data['name'] 
-            email = data['email'] 
-            content = data['content'] 
-        else:
-            return r500("Data not received as required")
-
-        send_mail(
-            subject=f"WEBSITE MAIL: Grievance from '{name}'",
-            message=f"From {name} ({email}).\n\n{content}",
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=["112201020@smail.iitpkd.ac.in","112201024@smail.iitpkd.ac.in", "petrichor@iitpkd.ac.in"]
-        )
-        # print("grievance email sent")
-        return ResponseWithCode({
-                'success': True
-            },"Email sent")
-
-    except Exception as e:
-        send_error_mail(inspect.stack()[0][3], request.data, e)
-        return ResponseWithCode({
-                'success': False
-            },"Something bad happened",500)
-
-
 
 
 
@@ -536,7 +509,79 @@ def apply_event_free(request: HttpRequest):
     except Exception as e:
         send_error_mail(inspect.stack()[0][3], request.data, e) 
         return error_response(f"Something went wrong: {str(e)}")
-    
+
+
+@api_view(['POST'])
+def send_grievance(request: HttpRequest):
+    try:
+        data = request.data
+        if isinstance(data, Empty) or data is None:
+            return r500("Invalid Form")
+        
+        if data.__contains__('name') and data.__contains__('email') and data.__contains__('content'):
+            name = data['name'] 
+            email = data['email'] 
+            content = data['content'] 
+        else:
+            return r500("Data not received as required")
+
+        send_mail(
+            subject=f"WEBSITE MAIL: Grievance from '{name}'",
+            message=f"From {name} ({email}).\n\n{content}",
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=["112201020@smail.iitpkd.ac.in","112201024@smail.iitpkd.ac.in", "petrichor@iitpkd.ac.in"]
+        )
+        # print("grievance email sent")
+        return ResponseWithCode({
+                'success': True
+            },"Email sent")
+
+    except Exception as e:
+        send_error_mail(inspect.stack()[0][3], request.data, e)
+        return ResponseWithCode({
+                'success': False
+            },"Something bad happened",500)
+
+#########################
+# CA Profile views
+
+@api_view(['POST'])
+def create_ca_user(request:HttpRequest):
+    if request.method != 'POST':
+        return r500("Method not allowed")
+    try:
+        user:User = request.user
+        if not hasattr(user,'caprofile'):
+            print("Here")
+            ca_profile = CAProfile(
+                user = user,
+                registration = 0  # -1 means not verified
+            )
+            ca_profile.save()
+        else:
+            ca_profile = user.caprofile
+
+        return Response({'success': True, 'CACode': ca_profile.CACode})
+    except Exception as e:
+        send_error_mail(inspect.stack()[0][3], request.data, e) 
+        return error_response(f"Something went wrong: {str(e)}")
+
+@api_view(['POST'])
+def get_ca_user(request:HttpRequest):
+    if request.method != 'POST':
+        return r500("Method not allowed")
+    try:
+        user = request.user
+        ca_profile:CAProfile = user.caprofile
+        if ca_profile is None:
+            return r500("CAProfile not found")
+
+        return Response({'status': 200,"success":True, 
+                         '  ': ca_profile.CACode,
+                         "registrations":ca_profile.registration})
+    except Exception as e:
+        send_error_mail(inspect.stack()[0][3], request.data, e) 
+        return error_response(f"Something went wrong: {str(e)}")
 
 
 @api_view(['POST'])
@@ -546,22 +591,24 @@ def verifyCA(request: Request):
             return error_response("Invalid Form")
         
         data = request.data
-        print("print:", data)
+        # print("print:", data)
 
         inputCAcode = data['CAcode'].strip()
         try:
             ca_profile = CAProfile.objects.get(CACode=inputCAcode)
-            user_email = ca_profile.email
-            profile = Profile.objects.get(email = user_email)
-            username = profile.username
-            
-            # Send a confirmation email to the user
-            subject = "Petrichor Fest - Campus Ambassador Programme Verification"
-            message = f"Hello {username},\n\nCongratulations! Your Campus Ambassador account with CA code {inputCAcode} has been successfully verified."
-            from_mail = settings.EMAIL_HOST_USER
-            to_mail_ls = [user_email]
-            
-            send_mail(subject, message, from_mail, to_mail_ls, fail_silently=False)
+            if ca_profile.registration == -1:
+                ca_profile.registration = 0
+                user_email = ca_profile.user.get_username()
+                profile = Profile.objects.get(email = user_email)
+                username = profile.username
+                
+                # Send a confirmation email to the user
+                subject = "Petrichor Fest - Campus Ambassador Programme Verification"
+                message = f"Hello {username},\n\nCongratulations! Your Campus Ambassador account with CA code {inputCAcode} has been successfully verified."
+                from_mail = settings.EMAIL_HOST_USER
+                to_mail_ls = [user_email]
+                
+                send_mail(subject, message, from_mail, to_mail_ls, fail_silently=False)
             
             return Response({
                 'status': 200,
@@ -595,7 +642,7 @@ def unverifyCA(request: Request):
             return error_response("Invalid Form")
         
         data = request.data
-        print("print:", data)
+        # print("print:", data)
 
         inputCAcode = data['CAcode'].strip()
         try:
