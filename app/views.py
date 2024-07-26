@@ -3,6 +3,7 @@ from django.conf import settings
 from django.forms import ValidationError
 from rest_framework.request import Empty, Request
 from django.contrib.auth.models import User
+from django.core.validators import validate_email
 from rest_framework.decorators  import api_view
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework.exceptions import AuthenticationFailed
@@ -26,6 +27,49 @@ from django.core.mail import send_mail
 
 TokenSerializer = TokenObtainPairSerializer()
 
+def validateSignUpData(data):
+    username:str = data['username'].strip()
+    email = data['email']
+    pass1 = data['password']
+    phone:str = data['phone']
+    insti_name = data['college']
+    gradyear = data['gradyear']
+    insti_type = data['institype']
+    stream = data['stream']
+    valid = False
+    message = ""
+    try:
+        validate_email(email)
+    except ValidationError:
+        message = "Invalid Email provided"
+    else:
+        if username.__len__() == 0 or username.__len__() > 9:
+            message = "Wrong Username format"
+        elif  email.__len__() == 0:
+            message = "Email cannot be empty"
+        elif not phone.isdigit():
+            message = "Wrong Phone Format"
+        elif phone.__len__() != 10:
+            message = "Phone Number must be of length : 10"
+        elif pass1.__len__() < 8:
+            message = "Password must atleast of 8 characters"
+        else:
+            if (insti_type == ""):
+                message = "Institute type is required"
+            elif insti_type != "neither":
+                if insti_name == "":
+                    message == "Institute Name is required"
+                elif not gradyear.isdigit() or gradyear == "":
+                    message = "GradYear required"
+                elif insti_type == "college" and stream == "":
+                    message = "Please specify your degree"
+                else : 
+                    valid = True
+            else:
+                valid = True
+    
+    return valid,message
+
 
 @api_view(['POST'])
 def signup(request):
@@ -38,6 +82,18 @@ def signup(request):
     try:
         # Retreiving all data
         data = request.data
+        if (not data):
+            return r500("Data not provided")
+
+        try:
+            valid,message = validateSignUpData(data)
+            if not valid:
+                return r500(message)
+        except ValueError:
+            return r500("Invalid data provided")
+
+        
+
         username = data['username'].strip()
         email = data['email']
         pass1 = data['password']
