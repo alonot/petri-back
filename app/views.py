@@ -43,11 +43,13 @@ def validateSignUpData(data):
     except ValidationError:
         message = "Invalid Email provided"
     else:
+        print(type(phone) == str )
+        print(phone.isdigit())
         if username.__len__() == 0 or username.__len__() > 9:
             message = "Wrong Username format"
         elif  email.__len__() == 0:
             message = "Email cannot be empty"
-        elif not phone.isdigit():
+        elif isinstance(phone,str) and not phone.isdigit():
             message = "Wrong Phone Format"
         elif phone.__len__() != 10:
             message = "Phone Number must be of length : 10"
@@ -59,7 +61,7 @@ def validateSignUpData(data):
             elif insti_type != "neither":
                 if insti_name == "":
                     message == "Institute Name is required"
-                elif not gradyear.isdigit() or gradyear == "":
+                elif (isinstance(gradyear,str) and (not gradyear.isdigit()  or gradyear == "")):
                     message = "GradYear required"
                 elif insti_type == "college" and stream == "":
                     message = "Please specify your degree"
