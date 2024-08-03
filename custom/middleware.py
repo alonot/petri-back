@@ -6,6 +6,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from django.http import HttpRequest, HttpResponse
 
 from utils import AUTH_EXEMPT, PetrichorAuthenticator, Refreshserializer
+
 class PetrichorAuthMiddleware(object):
     '''
         This is a custom middleware.
@@ -35,10 +36,10 @@ class PetrichorAuthMiddleware(object):
         '''
         exempt = True
         # for url in AUTH_EXEMPT:
-        if request.path.startswith('/auth'):
+        if request.path.startswith('/api/auth'):
             exempt = False
                 # break
-        
+
         if not exempt:
             resp_data = {
                 "refreshed": False,
@@ -47,7 +48,7 @@ class PetrichorAuthMiddleware(object):
             token = None
             try:
                 user = PetrichorAuthenticator.authenticate(request)
-                if user:  # If we got some data here, then user is already authorized
+                if user is not None:  # If we got some data here, then user is already authorized
                     resp_data['loggedIn'] = True
                     token = None
                 else: 
@@ -94,10 +95,7 @@ class PetrichorAuthMiddleware(object):
                 return HttpResponse(json.dumps(resp_data),content_type='application/json',status=400)
             
 
-
-
         response:HttpResponse = self.get_response(request)
-        
         # Code to be executed for each request/response after
         # the view is called.
 

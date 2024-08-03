@@ -5,7 +5,9 @@ from django.http import JsonResponse
 from app.models import *
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
+
 from utils import send_error_mail,r200, r500 , send_delete_transaction_mail
+
 
 
 
@@ -151,6 +153,61 @@ def getTR(request):
     except Exception:
         send_error_mail(inspect.stack()[0][3], request.data, e)
         return r500("something bad happened")
+
+
+@api_view(['GET'])
+def unverifTR(request):
+    try:
+        transaction_ids = []
+        transaction = TransactionTable.objects.filter(verified = False)
+        for user in transaction:
+            transaction_ids.append(user.transaction_id)
+        return JsonResponse({
+            'status' : 'success',
+            'unverified_transactions' : transaction_ids 
+        })
+    except Exception as e:
+        return r500("Opps!! Unable to complete the request!!!")
+
+
+@api_view(['POST'])
+def cancelTR(request):
+    try:
+        data = json.loads(request.body)
+        transaction_notfound = []
+        for item in data:
+            # Process each JSON object in the array
+            transaction_id = item.get('transaction_id')
+            email = item.get('email')
+            transaction = TransactionTable.objects.get(transaction_id=transaction_id)
+            if transaction is not None :
+                event_id = transaction.event_id
+                event_name = Event.objects.filter(event_id = event_id).name
+                transaction.delete()
+                send_delete_transaction_mail(email , event_name)
+            else:
+                transaction_notfound.append(transaction_id)
+        if len(transaction_notfound) == 0:
+            return JsonResponse({
+                'success' : True,
+                'message' : 'All mails sent'
+            })
+        else:
+            return JsonResponse({
+                'success' : False ,
+                'message' : 'Some ids were not found',
+                'transaction_notfound' : transaction_notfound
+            })
+    except TransactionTable.DoesNotExist:
+        return JsonResponse({
+            'success' : False ,
+            'error': 'Transaction not found'
+            }, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success' : False ,
+            'error': 'Invalid JSON'
+            }, status=400)
 
 
 

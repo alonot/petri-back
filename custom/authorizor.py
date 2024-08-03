@@ -1,6 +1,7 @@
 from rest_framework_simplejwt.exceptions import InvalidToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.request import Request
+from rest_framework_simplejwt.exceptions import AuthenticationFailed
 
 class PetrichorJWTAuthentication(JWTAuthentication):
     '''
@@ -18,6 +19,8 @@ class PetrichorJWTAuthentication(JWTAuthentication):
             return super().authenticate(request)
         except InvalidToken:
             pass 
+        except AuthenticationFailed:
+            return None 
 
     def get_header(self, request: Request) -> bytes:
         auth_token = super().get_header(request)
