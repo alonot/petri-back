@@ -43,8 +43,6 @@ def validateSignUpData(data):
     except ValidationError:
         message = "Invalid Email provided"
     else:
-        print(type(phone) == str )
-        print(phone.isdigit())
         if username.__len__() == 0 or username.__len__() > 9:
             message = "Wrong Username format"
         elif  email.__len__() == 0:
@@ -87,6 +85,7 @@ def signup(request):
         if (not data):
             return r500("Data not provided")
 
+        
         try:
             valid,message = validateSignUpData(data)
             if not valid:
@@ -114,11 +113,11 @@ def signup(request):
             "Email already registered",400)
         except User.DoesNotExist:
             try:
-                new_user = User(username=email)
+                new_user = User(username=email,email = email)
                 new_user.set_password(pass1)
                 new_user.is_active = True
             except IntegrityError as e: # Email alreeady exists
-                send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
+                # send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
                 return r500('Email already exists')
             
             try:
@@ -174,7 +173,7 @@ def signup(request):
 
     except Exception as e:
         print(e)
-        send_error_mail(inspect.stack()[0][3], request.data, e)
+        # send_error_mail(inspect.stack()[0][3], request.data, e)
         return r500("Something Bad Happened")
 
 
@@ -197,7 +196,7 @@ def ForgetPassword(request:HttpRequest):
 
 
         try:
-            User.objects.get(username=email)
+            user = User.objects.get(username=email)
         except User.DoesNotExist:
             return Response({
                 'status': 404,
@@ -205,16 +204,18 @@ def ForgetPassword(request:HttpRequest):
                 "username": None
             },404)
         
+        profile:Profile = user.profile
+        
         token = get_forget_token(email)# Generates Token, It lasts for 5 mins
         
-        send_forget_password_mail(email , token)
+        send_forget_password_mail(email , token,profile.username)
 
         return ResponseWithCode({
             "success":True
         },"An email is sent")
 
     except Exception as e:
-        # print(e)
+        print(e)
         send_error_mail(inspect.stack()[0][3], request.data, e)
         return r500("Something Bad Happened")
     
@@ -302,7 +303,7 @@ class LoginTokenSerializer(TokenObtainPairSerializer):
 
         except AuthenticationFailed:
             return {
-                "status":200,
+                "status":400,
                 "success":False,
                 "token":None,
                 "username":None,
@@ -319,7 +320,7 @@ class LoginUser(TokenObtainPairView):
     '''
     def post(self, request: Request, *args, **kwargs) -> Response:
         from django.middleware.csrf import get_token
-        print(get_token(request))
+        # print(get_token(request))
         if (not request.data.__contains__("username")):
             return ResponseWithCode({
                 "success":False,
@@ -330,7 +331,9 @@ class LoginUser(TokenObtainPairView):
                 "success":False,
             },"Password Not given",400)
 
-        return super().post(request, *args, **kwargs)
+        result = super().post(request, *args, **kwargs)
+        result.status_code = (result.data['status'])
+        return result
 
     serializer_class = LoginTokenSerializer
     
