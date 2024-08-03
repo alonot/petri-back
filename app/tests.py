@@ -2,7 +2,7 @@ import json
 import unittest
 from django.test import TestCase
 from django.test import Client
-from app.models import User,Profile,CAProfile,UserRegistrations
+from app.models import Institute, User,Profile,CAProfile,UserRegistrations
 from django.urls import reverse
 
 # to run use - py manage.py test app/test/
@@ -44,7 +44,6 @@ class RegisterTest(TestCase):
             "institype": "college",
             "stream": "cse"
         }) 
-        
         user = User.objects.filter(username = "alo@fsg.com").first()
         self.assertNotEqual(user,None)
         self.assertEqual(response.status_code, 200)
@@ -142,9 +141,20 @@ class RegisterTest(TestCase):
 class ForgetTest(TestCase):
 
     def setUp(self) -> None:
+        self.inst = Institute.objects.create(institutionType = "college",
+                                            instiName ="IITPKD" )
         user= User(username = "csk20020@gmail.com" )
+
         user.set_password("123w123qe")
         user.save()
+        self.profile = Profile.objects.create(
+            username='testuser',
+            user=user,
+            phone='1234567890',
+            instituteID=self.inst,
+            gradYear=2023,
+            stream='Engineering',
+        )
         return super().setUp()
         
     def test_good(self):

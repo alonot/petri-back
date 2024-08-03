@@ -613,7 +613,7 @@ def create_ca_user(request:HttpRequest):
     try:
         user:User = request.user
         if not hasattr(user,'caprofile'):
-            print("Here")
+            # print("Here")
             ca_profile = CAProfile(
                 user = user,
                 registration = 0  # -1 means not verified
