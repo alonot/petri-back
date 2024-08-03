@@ -101,7 +101,7 @@ def method_not_allowed():
 
 def send_forget_password_mail(email , token, name):
     subject = 'Your forget password link'
-    message = ForgetPasswordHtml(name, "https://petrichor-events.vercel.app/change-password/{token}/")
+    message = ForgetPasswordHtml(name, f"https://petrichor-events.vercel.app/changepassword/{token}/")
     email_from = settings.EMAIL_HOST_USER
     recipient_list = [email]
     send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=True, html_message=message)
