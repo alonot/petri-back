@@ -37,13 +37,13 @@ CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5173', 'https://petrichor.events'
+    'http://localhost:5173', 'https://petrichor.events', 'https://petrichor-events.vercel.app/'
 ]
 ALLOWED_HOSTS = [
     'localhost','127.0.0.1', 'https://petrichor.events', 'https://petrichor-events.vercel.app',"petri-back.vercel.app", ".vercel.app"
 ]
 CORS_ORIGIN_WHITELIST = [
-    'http://localhost:5173', 'https://petrichor.events'
+    'http://localhost:5173', 'https://petrichor.events', 'https://petrichor-events.vercel.app/'
 ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # or 'django.contrib.sessions.backends.cache'
