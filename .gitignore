@@ -1,3 +1,7 @@
-__pycache__
-.idea
 .env
+*/migrations
+*.sqlite3
+*/__pycache__
+custom/__pycache__
+__pycache__
+*static*
