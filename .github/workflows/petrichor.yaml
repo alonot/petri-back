@@ -31,6 +31,8 @@ jobs:
         echo "Environment ${{ env.DEBUG }}"
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        python manage.py makemigrations
+        python manage.py migrate
     - name: Petrichor Django Testing
       run: |
-        python3 manage.py test app/tests --keepdb
+        python3 manage.py test app/tests
