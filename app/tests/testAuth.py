@@ -9,6 +9,11 @@ from django.urls import reverse
 
 # to run use - py manage.py test app/test/
 
+# coverage run manage.py test app/tests --keepdb
+# coverage report
+# OR
+# coverage html
+
 
 headers = {"HTTP_HOST":"petrichor.events"}
 testClient= Client(
@@ -344,6 +349,20 @@ class AuthTest(TestCase):
                 "getUser":  True,
                 "getEvent": True,
             },content_type="application/json",headers={
+            'Authorization': f"Bearer {self.token}"
+        })
+            
+        except Exception as e:
+            self.fail("Error")
+
+        self.assertNotEqual(response.status_code, 200)
+
+    def test_wrongMethod(self):
+        '''
+            Test on a Invalid values
+        '''
+        try:
+            response = testClient.get('/api/auth/',content_type="application/json",headers={
             'Authorization': f"Bearer {self.token}"
         })
             

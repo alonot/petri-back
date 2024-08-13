@@ -626,7 +626,7 @@ def send_grievance(request: HttpRequest):
 @api_view(['POST'])
 def create_ca_user(request:HttpRequest):
     if request.method != 'POST':
-        return r500("Method not allowed")
+        return method_not_allowed()
     try:
         user:User = request.user
         if not hasattr(user,'caprofile'):
@@ -647,7 +647,7 @@ def create_ca_user(request:HttpRequest):
 @api_view(['POST'])
 def get_ca_user(request:HttpRequest):
     if request.method != 'POST':
-        return r500("Method not allowed")
+        return method_not_allowed()
     try:
         user = request.user
         ca_profile:CAProfile = user.caprofile
@@ -664,6 +664,8 @@ def get_ca_user(request:HttpRequest):
 
 @api_view(['POST'])
 def verifyCA(request: Request):
+    if request.method != 'POST':
+        return method_not_allowed()
     try:
         if request.data is None:
             return error_response("Invalid Form")
