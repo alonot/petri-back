@@ -13,6 +13,7 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    environment: production
     env:
         DEBUG: ${{ vars.DEBUG }}
         FORGET_KEY: ${{ vars.FORGET_KEY }}
@@ -27,7 +28,7 @@ jobs:
         python-version: 3.12
     - name: Install dependencies
       run: |
-        echo "Environment $DEBUG"
+        echo "Environment ${{ env.DEBUG }}"
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     - name: Petrichor Django Testing
