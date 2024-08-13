@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from utils import get_forget_token
 
-# to run use - py manage.py test app/test/
+# to run use - py manage.py test app/tests/ --keepdb
 
 
 headers = {"HTTP_HOST":"petrichor.events"}
@@ -83,6 +83,14 @@ class ChangePasswordTest(TestCase):
             "new_password": "newpassword123"
         }, content_type="application/json")
         self.assertEqual(response.status_code, 200)
+
+    def test_change_password_email_not_exists(self):
+        new_token = get_forget_token("112201020@smail.iitpkd.ac.in")
+        response = self.client.post(f'/api/change-password/{new_token}/', {
+            "new_password": "newpassword123"
+        }, content_type="application/json")
+        self.assertEqual(response.status_code, 500)
+        self.assertIn("No user exists with this email",response.content.__str__())
 
     def test_change_password_bad(self):
         response = self.client.post(f'/api/change-password/invalidtoken/', {
