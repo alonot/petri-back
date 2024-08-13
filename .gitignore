@@ -6,4 +6,4 @@ custom/__pycache__
 __pycache__
 *static*
 *htmlcov*
-*.*
+*.c*
