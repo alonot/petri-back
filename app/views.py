@@ -90,19 +90,21 @@ def signup(request):
             valid,message = validateSignUpData(data)
             if not valid:
                 return r500(message)
-        except ValueError:
-            return r500("Invalid data provided")
+        except ValueError or KeyError:
+            return r500("Data received does not contains all the required fields")
 
+        try:
+            username = data['username'].strip()
+            email = data['email']
+            pass1 = data['password']
+            phone = data['phone']
+            insti_name = data['college']
+            gradyear = data['gradyear']
+            insti_type = data['institype']
+            stream = data['stream']
+        except KeyError as e:
+            return r500("Data received does not contains all the required fields")
         
-
-        username = data['username'].strip()
-        email = data['email']
-        pass1 = data['password']
-        phone = data['phone']
-        insti_name = data['college']
-        gradyear = data['gradyear']
-        insti_type = data['institype']
-        stream = data['stream']
         # Checking if User already exists
         try:
             User.objects.get(username=email)
@@ -138,7 +140,7 @@ def signup(request):
                                     gradYear=gradyear,
                                     stream=stream)
                 
-                # saving the profile and user. If any of above steps fails the User/ Profile will not be created
+                # saving the profile and user. If any of above steps fails the Profile will not be created
                 user_profile.save()
 
                 user_registration = UserRegistrations.objects.filter(email = email).first()
@@ -151,29 +153,36 @@ def signup(request):
                         email = email,
                         transactionIds =""
                     )
-                
-                print("User Created")
+
+                # print("User Created")
                 return ResponseWithCode({
                     "success":True,
                     "username":username
                 },"success")
             
             except IntegrityError as e:
-                send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
-                new_user.delete()
+                if new_user:
+                    new_user.delete()
+                if user_registration:
+                    user_registration.delete()
+                if user_profile:
+                    user_profile.delete()
+                # send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
                 return r500("User already exists. Try something different.")
             except Exception as e:
-                new_user.delete()
+                if new_user:
+                    new_user.delete()
+                if user_registration:
+                    user_registration.delete()
+                if user_profile:
+                    user_profile.delete()
                 send_error_mail(inspect.stack()[0][3], request.data, e)  
                 r500("Something failed")
 
-    except KeyError as e:
-        return r500("Data received does not contains all the required fields")
-
 
     except Exception as e:
-        print(e)
-        # send_error_mail(inspect.stack()[0][3], request.data, e)
+        # print(e)
+        send_error_mail(inspect.stack()[0][3], request.data, e)
         return r500("Something Bad Happened")
 
 
@@ -215,7 +224,7 @@ def ForgetPassword(request:HttpRequest):
         },"An email is sent")
 
     except Exception as e:
-        print(e)
+        # print(e)
         send_error_mail(inspect.stack()[0][3], request.data, e)
         return r500("Something Bad Happened")
     
@@ -249,8 +258,11 @@ def ChangePassword(request:HttpRequest , token:str):
             return Response({"error": "Token expired"}, status=401)
         except BadSignature:
             return r500("Invalid Token")
-
-        user_obj = User.objects.get(username = email)
+        
+        user_obj = User.objects.filter(username = email).first()
+        if user_obj is None:
+            return r500("No user exists with this email.")
+        
         user_obj.set_password(new_password)
         user_obj.save()
         return ResponseWithCode({
@@ -390,15 +402,14 @@ def authenticated(request:HttpRequest):
                 'user_events':user_events,
             },"Yes")
         else:
-            # send_error_mail(inspect.stack()[0][3],request.data,e)
-
+            send_error_mail(inspect.stack()[0][3],request.data,e)
             return ResponseWithCode({
                 "success":False,
             },"Login completed but User is Anonymous",500)
     
     except Exception as e:
-        # send_error_mail(inspect.stack()[0][3],request.data,e)
-        print(e)
+        send_error_mail(inspect.stack()[0][3],request.data,e)
+        # print(e)
         return r500("some error occured. Reported to our developers")
 
 
@@ -615,7 +626,7 @@ def send_grievance(request: HttpRequest):
 @api_view(['POST'])
 def create_ca_user(request:HttpRequest):
     if request.method != 'POST':
-        return r500("Method not allowed")
+        return method_not_allowed()
     try:
         user:User = request.user
         if not hasattr(user,'caprofile'):
@@ -636,7 +647,7 @@ def create_ca_user(request:HttpRequest):
 @api_view(['POST'])
 def get_ca_user(request:HttpRequest):
     if request.method != 'POST':
-        return r500("Method not allowed")
+        return method_not_allowed()
     try:
         user = request.user
         ca_profile:CAProfile = user.caprofile
@@ -653,6 +664,8 @@ def get_ca_user(request:HttpRequest):
 
 @api_view(['POST'])
 def verifyCA(request: Request):
+    if request.method != 'POST':
+        return method_not_allowed()
     try:
         if request.data is None:
             return error_response("Invalid Form")

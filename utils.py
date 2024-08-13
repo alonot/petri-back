@@ -96,7 +96,7 @@ def get_profile_events(user:User):
 
 
 def method_not_allowed():
-    return ResponseWithCode({},"Method Not Allowed.Use Post")
+    return ResponseWithCode({},"Method Not Allowed.Use Post",405)
 
 
 def send_forget_password_mail(email , token, name):

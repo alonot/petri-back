@@ -9,6 +9,11 @@ from django.urls import reverse
 
 # to run use - py manage.py test app/test/
 
+# coverage run manage.py test app/tests --keepdb
+# coverage report
+# OR
+# coverage html
+
 
 headers = {"HTTP_HOST":"petrichor.events"}
 testClient= Client(
@@ -62,7 +67,7 @@ class RegisterTest(TestCase):
             "stream": "bse"
         })
 
-        self.assertEqual(response.status_code, 200) # here is the change from the above test case: assertNot
+        self.assertEqual(response.status_code, 200) 
         user = User.objects.filter(username = "alonot@fsg.com").first()
         self.assertNotEqual(user,None)
         profile = Profile.objects.filter(user = user).first()
@@ -71,6 +76,37 @@ class RegisterTest(TestCase):
         self.assertNotEqual(user_regs,None)   
         institute = Institute.objects.count()
         self.assertEqual(institute,1)     
+
+    def test_RegisterDuplicateUser(self):
+        '''
+            Test2 on a correct data but institute is already created
+        '''
+        Institute.objects.create(instiName = "IITPKD", institutionType = "college")
+        # registering the username once
+        self.test_RegisterGoodData1()
+
+        # registering the same data to check if this request is rejected or not
+        response = testClient.post('/api/register/',{
+            "username": "alonot",
+            "email":  "alo@fsg.com",
+            "password": "123w123qe",
+            "phone": "0000000000",
+            "college": "IITPKD",
+            "gradyear": 2024,
+            "institype": "college",
+            "stream": "bse"
+        })
+
+        self.assertEqual(response.status_code, 400) 
+        user = User.objects.filter(username = "alo@fsg.com").first()
+        # checking that previous datas must be same even after duplicate emails
+        self.assertNotEqual(user,None)
+        profile = Profile.objects.filter(user = user).first()
+        self.assertNotEqual(profile,None)
+        user_regs = UserRegistrations.objects.filter(user = user).first()
+        self.assertNotEqual(user_regs,None)   
+        institute = Institute.objects.count()
+        self.assertEqual(institute,1)  
 
     def test_RegisterWrongEmail(self):
         '''
@@ -313,6 +349,20 @@ class AuthTest(TestCase):
                 "getUser":  True,
                 "getEvent": True,
             },content_type="application/json",headers={
+            'Authorization': f"Bearer {self.token}"
+        })
+            
+        except Exception as e:
+            self.fail("Error")
+
+        self.assertNotEqual(response.status_code, 200)
+
+    def test_wrongMethod(self):
+        '''
+            Test on a Invalid values
+        '''
+        try:
+            response = testClient.get('/api/auth/',content_type="application/json",headers={
             'Authorization': f"Bearer {self.token}"
         })
             
