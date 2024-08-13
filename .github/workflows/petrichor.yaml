@@ -21,6 +21,7 @@ jobs:
       with:
         python-version: 3.12
     - name: SetUp environment vars
+      run: echo "Environment variable set"
       env:
         FORGET_KEY: ${{ vars.FORGET_KEY }}
         FORGET_SALT_KEY: ${{ vars.FORGET_SALT_KEY }}
