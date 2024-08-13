@@ -42,7 +42,7 @@ class RegisterTest(TestCase):
         }) 
         user = User.objects.filter(username = "alo@fsg.com").first()
         self.assertNotEqual(user,None)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 100)
         profile = Profile.objects.filter(user = user).first()
         self.assertNotEqual(profile,None)
         user_regs = UserRegistrations.objects.filter(user = user).first()
