@@ -13,6 +13,11 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    env:
+        DEBUG: ${{ vars.DEBUG }}
+        FORGET_KEY: ${{ vars.FORGET_KEY }}
+        FORGET_SALT_KEY: ${{ vars.FORGET_SALT_KEY }}
+        SECRET_KEY: ${{ vars.SECRET_KEY }}
 
     steps:
     - uses: actions/checkout@v2
@@ -20,14 +25,6 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: 3.12
-    - name: SetUp environment vars
-      run: |
-        echo "Environment variable set"
-      env:
-        DEBUG: ${{ vars.DEBUG }}
-        FORGET_KEY: ${{ vars.FORGET_KEY }}
-        FORGET_SALT_KEY: ${{ vars.FORGET_SALT_KEY }}
-        SECRET_KEY: ${{ vars.SECRET_KEY }}
     - name: Install dependencies
       run: |
         echo "Environment $DEBUG"
