@@ -78,21 +78,21 @@ class PetrichorAuthMiddleware(object):
                 resp_data = {
                     "success":False,
                     "message":"Refresh token not present",
-                    "status":404
+                    "status":403
                 }
                 # if user is not logged then returning the response from here only. 
                 # The request does goes further to any middleware or the target view
-                return HttpResponse(json.dumps(resp_data),content_type='application/json',status=404)
+                return HttpResponse(json.dumps(resp_data),content_type='application/json',status=403)
             resp_data['access'] = token
             if not resp_data['loggedIn']:
                 resp_data.update({
                     "success":False,
                     "message":"Not Logged in",
-                    "status":404
+                    "status":403
                 })
                 # if user is not logged then returning the response from here only. 
                 # The request does goes further to any middleware or the target view
-                return HttpResponse(json.dumps(resp_data),content_type='application/json',status=404)
+                return HttpResponse(json.dumps(resp_data),content_type='application/json',status=403)
             
 
         response:HttpResponse = self.get_response(request)

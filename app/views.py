@@ -236,11 +236,17 @@ def ChangePassword(request:HttpRequest , token:str):
             new_password = data['new_password']
         else:
             return r500("Passwords not received")
+
+        if len(new_password) < 8:
+            return Response({"error": "Password does not meet complexity requirements"}, status=400)
+        
+        # if len(new_password) < 8 or not any(char.isdigit() for char in new_password) or not any(char.isupper() for char in new_password) or not any(char.islower() for char in new_password) or not any(char in "!@#$%^&*()_+" for char in new_password):
+        #     return Response({"error": "Password does not meet complexity requirements"}, status=400)
         
         try:
             email = get_email_from_token(token)
         except SignatureExpired:
-            return r500("Token expired")
+            return Response({"error": "Token expired"}, status=401)
         except BadSignature:
             return r500("Invalid Token")
 
