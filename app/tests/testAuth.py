@@ -7,7 +7,7 @@ from django.test import Client
 from app.models import Institute, User,Profile,CAProfile,UserRegistrations
 from django.urls import reverse
 
-# to run use - py manage.py test app/test/
+# to run use - py manage.py test app/tests/
 
 # coverage run manage.py test app/tests --keepdb
 # coverage report
