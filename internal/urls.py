@@ -2,13 +2,17 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('events/',views.getEventUsers ,name="event"),  # under progress
-    path('verifyTR',views.verifyTR,name="verifyTR"),  # under progress
-    path('unvertrid',views.getTR,name="unvertrid"),
-    path('events/unconfirmed',views.getUnconfirmed ,name="unconfirmed"),  # new needed
-    path('event/add/',views.addEvent,name="addEvent"),
-    path('events/update/',views.updateEvent,name="updateEvent"),
-    path('sheets/view/', views.display_sheet, name="display_sheet"),
-    path('unverifTR',views.unverifTR , name="unverifTR"),
-    path('cancelTR',views.cancelTR , name="cancelTR")
+    path('verifyTR',views.verifyTR,name="verifyTR"),  # under progress  get a list of TRs and verify them Zeeshan
+    path('unvertrid',views.unverifyTRs,name="unvertrid"), # get a list of TRs and unverify them Zeeshan
+    # UNverify : 
+    #   delete TransactionTableEntry,
+        # for each participants ->   userRegistration transID remove
+
+    path('events/unconfirmed',views.getUnconfirmed ,name="unconfirmed"),  # new needed Aditya
+
+    # Events 
+    path('event/add/',views.addEvent,name="addEvent"),  # requires change Chirag
+    path('events/update/',views.updateEvent,name="updateEvent"),  # requires change Chirag
+    # 
+    path('sheets/view/', views.display_sheet, name="display_sheet"), # review, changes needed add fee Zeeshan
 ]

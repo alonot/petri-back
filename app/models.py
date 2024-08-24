@@ -7,7 +7,6 @@ User = get_user_model()
 
 
 
-
 class Institute(models.Model):
     institutionType = models.CharField(max_length=255, default="",null=True)
     instiName = models.CharField(unique=True, max_length=255)
@@ -75,6 +74,7 @@ class TransactionTable(models.Model):
     user_id = models.ForeignKey(User,on_delete=models.PROTECT,null=True)
     participants = models.TextField()
     transaction_id = models.TextField(primary_key=True)
+    # fee
     verified = models.BooleanField()
     CACode = models.ForeignKey(CAProfile,on_delete=models.SET_NULL,max_length=10, null=True)
 

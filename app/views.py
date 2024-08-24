@@ -644,26 +644,13 @@ def create_ca_user(request:HttpRequest):
         send_error_mail(inspect.stack()[0][3], request.data, e) 
         return error_response(f"Something went wrong: {str(e)}")
 
-@api_view(['POST'])
-def get_ca_user(request:HttpRequest):
-    if request.method != 'POST':
-        return method_not_allowed()
-    try:
-        user = request.user
-        ca_profile:CAProfile = user.caprofile
-        if ca_profile is None:
-            return r500("CAProfile not found")
-
-        return Response({'status': 200,"success":True, 
-                         '  ': ca_profile.CACode,
-                         "registrations":ca_profile.registration})
-    except Exception as e:
-        send_error_mail(inspect.stack()[0][3], request.data, e) 
-        return error_response(f"Something went wrong: {str(e)}")
-
 
 @api_view(['POST'])
+@DeprecationWarning
 def verifyCA(request: Request):
+    '''
+        Verify if this CACode exists or not
+    '''
     if request.method != 'POST':
         return method_not_allowed()
     try:
@@ -709,57 +696,5 @@ def verifyCA(request: Request):
         return Response({
             'status': 400,
             'verified': False,
-            'message': "Oops! Unable to complete the request."
-        })
-
-
-
-
-@api_view(['POST'])
-def unverifyCA(request: Request):
-    try:
-        if request.data is None:
-            return error_response("Invalid Form")
-        
-        data = request.data
-        # print("print:", data)
-
-        inputCAcode = data['CAcode'].strip()
-        try:
-            ca_profile = CAProfile.objects.get(CACode=inputCAcode)
-            user_email = ca_profile.email
-            profile = Profile.objects.get(email = user_email)
-            username = profile.username
-            
-            # Delete the profile
-            ca_profile.delete()
-            
-            # Send an email to the user
-            subject = "Petrichor Fest - Campus Ambassador Programme Unverification"
-            message = f"Hello {username},\n\nYour Campus Ambassador account with CA code {inputCAcode} has not been verified and has been removed from our system."
-            from_mail = settings.EMAIL_HOST_USER
-            to_mail_ls = [user_email]
-            
-            send_mail(subject, message, from_mail, to_mail_ls, fail_silently=False)
-            
-            return Response({
-                'status': 200,
-                'unverified': True,
-                'message': "CA account has been removed and the user has been notified."
-            })
-        except Profile.DoesNotExist:
-            return Response({
-                'status': 404,
-                'unverified': False,
-                'message': "CA code not found in our database."
-            })
-        except Exception as e:
-            send_error_mail(inspect.stack()[0][3], request.data, e)
-            return error_response("Something bad happened")
-
-    except Exception as e:
-        return Response({
-            'status': 400,
-            'unverified': False,
             'message': "Oops! Unable to complete the request."
         })

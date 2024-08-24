@@ -10,8 +10,11 @@ from utils import send_error_mail,r200, r500 , send_delete_transaction_mail
 
 
 
-
+@DeprecationWarning
 def getEventUsers(request):
+    '''
+        Fetch all the users related to the given event ID
+    '''
     if request.method == 'POST':
         data = json.loads(request.body)
         eventid = data.get('eventid')
@@ -34,6 +37,10 @@ def getEventUsers(request):
 #This is Transaction IDS
 #Here i am just iteration through all the transaction ids and marking them true or false or success if that transaction id exists in the req which i will get 
 def verifyTR(request):
+    '''
+        send Event verified mail to the users
+    '''
+    
     if request.method == 'POST':
         data = json.loads(request.body)
         # Here if no transaction id then it will start with a default of the empty list
@@ -109,65 +116,6 @@ def cancelTR(request):
             }, status=400)
 
 
-
-
-@api_view(['GET'])
-def getTR(request):
-    try:
-        unconfirmed = TransactionTable.objects.filter(verified = False)
-        data = []
-        for u in unconfirmed:
-            if 'test' in u.transaction_id:
-                continue
-            try:
-                event = Event.objects.get(eventId=u.event_id)
-                # event = get_event_from_id(u.eventId)
-            except Exception as e:
-                if u.event_id:
-                    print(u.event_id, "doesnt exist")
-                continue
-            
-            emails = u.get_participants()
-            if not emails:
-                continue
-            main_guy = u.user_id
-            try:
-                main_user = Profile.objects.get(email=main_guy)
-                # main_user = get_profile_from_email(main_guy)
-            except Exception as e:
-                if main_guy:
-                    print(main_guy, "doesnt exist")
-                continue
-            
-
-            data.append({
-                'transID': u.transaction_id,
-                # 'amount': event.fee,
-                'amount': event['fee'],
-                'name': main_user.username,
-                'phone': main_user.phone,
-                'parts': len(emails)
-            })
-        
-        return Response({data},"data fetch successfull")
-    except Exception:
-        send_error_mail(inspect.stack()[0][3], request.data, e)
-        return r500("something bad happened")
-
-
-@api_view(['GET'])
-def unverifTR(request):
-    try:
-        transaction_ids = []
-        transaction = TransactionTable.objects.filter(verified = False)
-        for user in transaction:
-            transaction_ids.append(user.transaction_id)
-        return JsonResponse({
-            'status' : 'success',
-            'unverified_transactions' : transaction_ids 
-        })
-    except Exception as e:
-        return r500("Opps!! Unable to complete the request!!!")
 
 
 @api_view(['POST'])
@@ -280,6 +228,10 @@ def display_sheet(request):
 
 # @lru_cache()
 def getDataFromID(eventID):
+    '''
+        add  fee column
+        add 
+    '''
     try:
         teamlst = TransactionTable.objects.filter(eventId=eventID)
         teamdict = {}  # info of each team
