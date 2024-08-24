@@ -119,6 +119,7 @@ WSGI_APPLICATION = 'petri_ca.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 if DEBUG:
+    print("Using Local Database")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',

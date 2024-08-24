@@ -33,4 +33,4 @@ jobs:
         pip install -r requirements.txt
     - name: Petrichor Django Testing
       run: |
-        python3 manage.py test app/tests --keepdb
+        python3 manage.py test app/tests

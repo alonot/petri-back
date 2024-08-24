@@ -43,8 +43,8 @@ def validateSignUpData(data):
     except ValidationError:
         message = "Invalid Email provided"
     else:
-        if username.__len__() == 0 or username.__len__() > 9:
-            message = "Wrong Username format"
+        if username.__len__() == 0 or username.__len__() > 25:
+            message = "Wrong Username format: Username must be of atmost 25 characters"
         elif  email.__len__() == 0:
             message = "Email cannot be empty"
         elif isinstance(phone,str) and not phone.isdigit():
@@ -58,11 +58,15 @@ def validateSignUpData(data):
                 message = "Institute type is required"
             elif insti_type != "neither":
                 if insti_name == "":
-                    message == "Institute Name is required"
+                    message = "Institute Name is required"
+                elif insti_name.__len__() > 100:
+                    message = "Wrong Institute Name format: Username must be of atmost 100 characters"
                 elif (isinstance(gradyear,str) and (not gradyear.isdigit()  or gradyear == "")):
                     message = "GradYear required"
                 elif insti_type == "college" and stream == "":
                     message = "Please specify your degree"
+                elif insti_type == "college" and stream.__len__() > 100:
+                    message = "Wrong Institute Name format: Username must be of atmost 100 characters"
                 else : 
                     valid = True
             else:
@@ -129,7 +133,6 @@ def signup(request):
                     # institute = Institute.objects.get(instiName=instituteID)
                 else:
                     institute = Institute.objects.get_or_create(instiName='NoInsti', institutionType=insti_type)[0]
-                
                 institute.save() # Kept for safety {create will automatically save}
                 
                 new_user.save()
@@ -181,7 +184,7 @@ def signup(request):
 
 
     except Exception as e:
-        # print(e)
+        print(e)
         send_error_mail(inspect.stack()[0][3], request.data, e)
         return r500("Something Bad Happened")
 
