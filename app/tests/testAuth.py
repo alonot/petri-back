@@ -108,6 +108,35 @@ class RegisterTest(TestCase):
         institute = Institute.objects.count()
         self.assertEqual(institute,1)  
 
+    def test_RegisterDuplicateCollegeName(self):
+        '''
+            Test2 on a correct data but institute is already created
+        '''
+        Institute.objects.create(instiName = "IIT PKD", institutionType = "college")
+
+        # registering the same data to check if this request is rejected or not
+        response = testClient.post('/api/register/',{
+            "username": "alonot",
+            "email":  "alonot@fsg.com",
+            "password": "123w123qe",
+            "phone": "0000000000",
+            "college": "IITPKD",
+            "gradyear": 2024,
+            "institype": "school",
+            "stream": "bse"
+        })
+
+        self.assertEqual(response.status_code, 200) 
+        user = User.objects.filter(username = "alonot@fsg.com").first()
+        # checking that previous datas must be same even after duplicate emails
+        self.assertNotEqual(user,None)
+        profile = Profile.objects.filter(user = user).first()
+        self.assertNotEqual(profile,None)
+        user_regs = UserRegistrations.objects.filter(user = user).first()
+        self.assertNotEqual(user_regs,None)   
+        institute = Institute.objects.count()
+        self.assertEqual(institute,2)  
+
     def test_RegisterWrongEmail(self):
         '''
             Test on a wrong email

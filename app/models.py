@@ -9,7 +9,7 @@ User = get_user_model()
 
 class Institute(models.Model):
     institutionType = models.CharField(max_length=255, default="",null=True)
-    instiName = models.CharField(unique=True, max_length=255)
+    instiName = models.CharField(max_length=255)
     def __str__(self):
         return self.instiName
     
