@@ -649,7 +649,7 @@ def create_ca_user(request:HttpRequest):
 
 
 @api_view(['POST'])
-@DeprecationWarning
+# @DeprecationWarning
 def verifyCA(request: Request):
     '''
         Verify if this CACode exists or not

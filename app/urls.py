@@ -24,7 +24,7 @@ urlpatterns = [
 
     ###
     path('auth/CA/create/', views.create_ca_user, name='create_ca_user'),
-    path('CA/verify/', views.verifyCA, name='verifyCA'),  # changes needed Chirag
+    # path('CA/verify/', views.verifyCA, name='verifyCA'),  # changes needed Chirag
     ###
 
 ]

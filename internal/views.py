@@ -10,7 +10,7 @@ from utils import send_error_mail,r200, r500 , send_delete_transaction_mail
 
 
 
-@DeprecationWarning
+# @DeprecationWarning
 def getEventUsers(request):
     '''
         Fetch all the users related to the given event ID
