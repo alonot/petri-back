@@ -49,6 +49,22 @@ class RegisterTest(TestCase):
         self.assertNotEqual(user_regs,None)
         institute = Institute.objects.count()
         self.assertEqual(institute,1)
+
+    def test_RegisterTestData1(self):
+        '''Testing on crooked data based on model'''
+        response = testClient.post(self.register_url, {
+            "username": "Dhruvadeep_Client_0001",
+            "email": "dhruvadeep.dev",
+            "password": "qwerty123",
+            # Phone length to 25 length
+            "phone": "12761212312341234123",
+            "college": "<strong>Test HTML</strong>",
+            "gradeyear": 1970,
+            "institype": "college",
+            "stream": "<h1>Hello Motto</h1>"
+        })
+
+    # Test the above method ahead
         
     def test_RegisterGoodData2(self):
         '''
