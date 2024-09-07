@@ -249,7 +249,7 @@ def updateEvent(request):
 
             event= Event.objects.get(eventId=dt_eventId)
             # print(event.name,event.fee,dt_fee)
-            if dt_name is not None:
+            if dt_name is not None: # ""
                 event.name=dt_name
             if dt_fee is not None:
                 event.fee=dt_fee

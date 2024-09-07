@@ -1,3 +1,4 @@
+import re
 import time
 from django.conf import settings
 from django.forms import ValidationError
@@ -9,7 +10,6 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework.exceptions import AuthenticationFailed
 
 from rest_framework.response import Response 
-from django.http import HttpRequest
 from django.core.mail import send_mail
 from django.contrib.auth.models import AnonymousUser
 from django.core.signing import SignatureExpired,BadSignature
@@ -18,6 +18,7 @@ from utils import ResponseWithCode, get_email_from_token, get_forget_token, get_
 r500,send_error_mail, method_not_allowed , send_forget_password_mail,error_response
 from .models import EMAIL_SEPARATOR, Institute, Profile, TransactionTable,Event,CAProfile,UserRegistrations
 from django.db.utils import IntegrityError
+from django.utils.datastructures import MultiValueDictKeyError
 import inspect
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -28,51 +29,66 @@ from django.core.mail import send_mail
 TokenSerializer = TokenObtainPairSerializer()
 
 def validateSignUpData(data):
-    username:str = data['username'].strip()
-    email = data['email']
-    pass1 = data['password']
-    phone:str = data['phone']
-    insti_name = data['college']
-    gradyear = data['gradyear']
-    insti_type = data['institype']
-    stream = data['stream']
+    username = data.get('username', '').strip()
+    email = data.get('email', '')
+    pass1 = data.get('password', '')
+    phone = data.get('phone', '')
+    insti_name = data.get('college', '')
+    gradyear = data.get('gradyear', '')
+    insti_type = data.get('institype', '')
+    stream = data.get('stream', '')
+
+    def is_valid_string(s, pattern):
+        return bool(re.match(pattern, s))
+
     valid = False
     message = ""
+
     try:
         validate_email(email)
     except ValidationError:
-        message = "Invalid Email provided"
-    else:
-        if username.__len__() == 0 or username.__len__() > 25:
-            message = "Wrong Username format: Username must be of atmost 25 characters"
-        elif  email.__len__() == 0:
-            message = "Email cannot be empty"
-        elif isinstance(phone,str) and not phone.isdigit():
-            message = "Wrong Phone Format"
-        elif phone.__len__() != 10:
-            message = "Phone Number must be of length : 10"
-        elif pass1.__len__() < 8:
-            message = "Password must atleast of 8 characters"
-        else:
-            if (insti_type == ""):
-                message = "Institute type is required"
-            elif insti_type != "neither":
-                if insti_name == "":
-                    message = "Institute Name is required"
-                elif insti_name.__len__() > 100:
-                    message = "Wrong Institute Name format: Username must be of atmost 100 characters"
-                elif (isinstance(gradyear,str) and (not gradyear.isdigit()  or gradyear == "")):
-                    message = "GradYear required"
-                elif insti_type == "college" and stream == "":
-                    message = "Please specify your degree"
-                elif insti_type == "college" and stream.__len__() > 100:
-                    message = "Wrong Institute Name format: Username must be of atmost 100 characters"
-                else : 
-                    valid = True
+        return False, "Invalid Email provided"
+    
+    if not isinstance(username, str):
+        message = "Wrong Username format: must be str"
+    elif not (1 <= len(username) <= 25):
+        message = "Wrong Username format: Username must be between 1 and 25 characters"
+    elif not is_valid_string(username, r"^[a-zA-Z0-9_\s]+$"):
+        message = "Wrong Username format: can contain only {a-z, A-Z, 0-9, _, space}"
+    elif not email:
+        message = "Email cannot be empty"
+    elif isinstance(phone, str) and not phone.isdigit():
+        message = "Wrong Phone Format"
+    elif len(phone) != 10:
+        message = "Phone Number must be of length: 10"
+    elif len(pass1) < 8:
+        message = "Password must be at least 8 characters"
+    elif not is_valid_string(pass1, r"^[a-zA-Z0-9_\s\.]+$"):
+        message = "Password can contain only {a-z, A-Z, 0-9, _, space, .}"
+    elif insti_type and insti_type != "neither":
+        if not insti_name:
+            message = "Institute Name is required"
+        elif len(insti_name) > 100:
+            message = "Institute Name must be at most 100 characters"
+        elif not is_valid_string(insti_name, r"^[a-zA-Z0-9_\s\.]+$"):
+            message = "Institute Name can contain only {a-z, A-Z, 0-9, _, space, .}"
+        elif isinstance(gradyear, str) and (not gradyear.isdigit() or not gradyear):
+            message = "GradYear required and must be numeric"
+        elif insti_type == "college":
+            if not stream:
+                message = "Please specify your degree"
+            elif len(stream) > 100:
+                message = "Degree must be at most 100 characters"
+            elif not is_valid_string(stream, r"^[a-zA-Z0-9_\s\.]+$"):
+                message = "Degree can contain only {a-z, A-Z, 0-9, _, space, .}"
             else:
                 valid = True
-    
-    return valid,message
+        else:
+            valid = True
+    else:
+        valid = True
+
+    return valid, message
 
 
 @api_view(['POST'])
@@ -94,7 +110,7 @@ def signup(request):
             valid,message = validateSignUpData(data)
             if not valid:
                 return r500(message)
-        except ValueError or KeyError:
+        except MultiValueDictKeyError or ValueError or KeyError:
             return r500("Data received does not contains all the required fields")
 
         try:
@@ -126,6 +142,8 @@ def signup(request):
                 # send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
                 return r500('Email already exists')
             
+            user_registration = None
+            user_profile = None
             try:
                 # creates or gets the InstituteId
                 if insti_type != "neither":
@@ -191,7 +209,7 @@ def signup(request):
 
 
 @api_view(['POST'])
-def ForgetPassword(request:HttpRequest):
+def ForgetPassword(request:Request):
     '''
         Reset Password
 
@@ -199,7 +217,7 @@ def ForgetPassword(request:HttpRequest):
     if request.method != 'POST':
         return method_not_allowed()
     try:
-        data:dict = request.data
+        data = request.data
         if data.__contains__('email'):
             email = data['email'].strip()
         else:
@@ -216,7 +234,7 @@ def ForgetPassword(request:HttpRequest):
                 "username": None
             },404)
         
-        profile:Profile = user.profile
+        profile:Profile = user.profile # type: ignore
         
         token = get_forget_token(email)# Generates Token, It lasts for 5 mins
         
@@ -234,7 +252,7 @@ def ForgetPassword(request:HttpRequest):
 
 
 @api_view(['POST'])
-def ChangePassword(request:HttpRequest , token:str):
+def ChangePassword(request:Request , token:str):
     '''
         Changes Password
     '''
@@ -304,9 +322,10 @@ class LoginTokenSerializer(TokenObtainPairSerializer):
             data = super().validate(attrs)
             user = self.user
             if hasattr(user,'profile'):
-                user_profile:Profile = user.profile
+                user_profile:Profile = user.profile # type: ignore
             else:
-                user.delete()
+                if user:
+                    user.delete()
                 return {
                     "status":400,
                     "success":False,
@@ -353,14 +372,15 @@ class LoginUser(TokenObtainPairView):
             },"Password Not given",400)
 
         result = super().post(request, *args, **kwargs)
-        result.status_code = (result.data['status'])
+        if (result.data):
+            result.status_code = (result.data['status'])
         return result
 
     serializer_class = LoginTokenSerializer
     
     
 @api_view(['POST'])
-def authenticated(request:HttpRequest):
+def authenticated(request:Request):
     '''
         Authenticates, send the user info if getUser = True in the data body
         send the user events if getEvents = True in the data body
@@ -405,7 +425,7 @@ def authenticated(request:HttpRequest):
                 'user_events':user_events,
             },"Yes")
         else:
-            send_error_mail(inspect.stack()[0][3],request.data,e)
+            # send_error_mail(inspect.stack()[0][3],request.data,e)
             return ResponseWithCode({
                 "success":False,
             },"Login completed but User is Anonymous",500)
@@ -442,7 +462,7 @@ def get_event_data(request):
         
         return ResponseWithCode({
             "success":True,
-            "name": event['name'],
+            "name": event.name,
             "fee": event['fee'],
             "minMemeber": event['minMember'],
             "maxMemeber": event['maxMember']
@@ -510,15 +530,15 @@ def apply_event_paid(request: Request):
         )
 
         for participant in participants:
-            user_registration:UserRegistrations = UserRegistrations.objects.filter(email = participant).first()
+            user_registration = UserRegistrations.objects.filter(email = participant).first()
             if user_registration is not None:
                 user_registration.transactionIds = user_registration.transactionIds + EMAIL_SEPARATOR + transactionId
-                user_registration.asave()
+                user_registration.asave() # type: ignore
             else:
                 UserRegistrations.objects.acreate(
                     user = None, email = participant, 
                     transactionIds = transactionId
-                )
+                ) # type: ignore
 
 
         eventpaidTableObject.save()
@@ -531,7 +551,7 @@ def apply_event_paid(request: Request):
     
 
 @api_view(['POST'])
-def apply_event_free(request: HttpRequest):
+def apply_event_free(request: Request):
     data = request.data
     if not data:
         return r500("Invalid form")
@@ -572,15 +592,15 @@ def apply_event_free(request: HttpRequest):
 
 
         for participant in participants:
-            user_registration:UserRegistrations = UserRegistrations.objects.filter(email = participant).first()
+            user_registration = UserRegistrations.objects.filter(email = participant).first()
             if user_registration is not None:
                 user_registration.transactionIds = user_registration.transactionIds + EMAIL_SEPARATOR + transaction_id
-                user_registration.asave()
+                user_registration.asave() # type: ignore
             else:
                 UserRegistrations.objects.acreate(
                     user = None, email = participant, 
                     transactionIds = transaction_id
-                )
+                ) # type: ignore
 
         eventfreeTableObject.save()
         return ResponseWithCode({
@@ -593,7 +613,7 @@ def apply_event_free(request: HttpRequest):
 
 
 @api_view(['POST'])
-def send_grievance(request: HttpRequest):
+def send_grievance(request: Request):
     try:
         data = request.data
         if isinstance(data, Empty) or data is None:
@@ -627,7 +647,7 @@ def send_grievance(request: HttpRequest):
 # CA Profile views
 
 @api_view(['POST'])
-def create_ca_user(request:HttpRequest):
+def create_ca_user(request:Request):
     if request.method != 'POST':
         return method_not_allowed()
     try:
@@ -640,7 +660,7 @@ def create_ca_user(request:HttpRequest):
             )
             ca_profile.save()
         else:
-            ca_profile = user.caprofile
+            ca_profile = user.caprofile # type: ignore
 
         return Response({'success': True, 'CACode': ca_profile.CACode})
     except Exception as e:
@@ -648,7 +668,7 @@ def create_ca_user(request:HttpRequest):
         return error_response(f"Something went wrong: {str(e)}")
 
 @api_view(['POST'])
-def get_ca_user(request:HttpRequest):
+def get_ca_user(request:Request):
     if request.method != 'POST':
         return method_not_allowed()
     try:

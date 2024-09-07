@@ -18,7 +18,7 @@ class Institute(models.Model):
 class Profile(models.Model):
     username = models.TextField()
     user = models.OneToOneField(User,primary_key=True,on_delete=models.CASCADE)
-    phone = models.CharField(max_length=25)
+    phone = models.CharField(max_length=10)
     instituteID = models.ForeignKey(Institute,on_delete=models.SET_NULL,null=True, max_length=255)
     gradYear = models.IntegerField(default=6969)
     stream = models.TextField(null=True)
