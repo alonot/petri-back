@@ -432,7 +432,7 @@ def authenticated(request:Request):
     
     except Exception as e:
         send_error_mail(inspect.stack()[0][3],request.data,e)
-        # print(e)
+        print(e)
         return r500("some error occured. Reported to our developers")
 
 
@@ -482,10 +482,16 @@ def apply_event_paid(request: Request):
         
 
         try:
-            participants = data['participants']
-            event_id = data['eventId'].strip()
-            transactionId = data['transactionID'].strip()
-            CAcode = data['CAcode'].strip()
+            participants = data.get('participants')
+            event_id = data.get('eventId')
+            transactionId = data.get('transactionID')
+            CAcode = data.get('CACode')
+            if event_id is None:
+                return r500("null event Id , key is eventId")
+            elif transactionId is None:
+                return r500("null transaction Id , key is transactionID")
+            elif CAcode is None:
+                return r500("null CAcode Id , key is CACode")
 
         except KeyError as e:
             send_error_mail(inspect.stack()[0][3], request.data, e) 
@@ -500,7 +506,7 @@ def apply_event_paid(request: Request):
             transactionId=f"IIT Palakkad Student+{time.time()}"
 
         # Check for duplicate transaction ID
-        if TransactionTable.objects.filter(transactionId=transactionId).exists():
+        if TransactionTable.objects.filter(transaction_id=transactionId).exists():
             return r500("Duplicate transaction ID used for another event")
 
         try:
@@ -521,7 +527,7 @@ def apply_event_paid(request: Request):
         try:
             if CAcode != "null":
                 ca_profile = CAProfile.objects.get(CACode = CAcode)
-        except User.DoesNotExist:
+        except CAProfile.DoesNotExist:
             return ResponseWithCode({"success":False},"CA user not found",439)  # frontend need to check for this code, and display appropiate message
         
 
@@ -553,6 +559,7 @@ def apply_event_paid(request: Request):
             "success":True
         },"Event applied successfully")
     except Exception as e:
+        print(e)
         return r500("Unexpected error occurred")
 
     
@@ -564,8 +571,6 @@ def apply_event_free(request: Request):
         return r500("Invalid form")
 
     try:
-
-        user_id = data['user_id'].strip()
         participants = data['participants']
         event_id = data['eventId'].strip()
 
@@ -573,20 +578,15 @@ def apply_event_free(request: Request):
         send_error_mail(inspect.stack()[0][3], request.data, e) 
         return error_response("Missing required fields: participants and eventId")
 
+    user = request.user
     
     try:
-        transaction_id = f"{user_id}+free+{time.time()}"
+        transaction_id = f"{user.id}+free+{time.time()}"
 
         try:
             event = Event.objects.get(event_id = event_id)
         except Event.DoesNotExist:
             return r500("No event exists with given event_id")
-        
-        try:
-            user = User.objects.get(username = user_id)
-        except User.DoesNotExist:
-            return r500("No user exists with given user_id")
-    
 
         # Create a new event record
         eventfreeTableObject = TransactionTable(
@@ -669,7 +669,7 @@ def create_ca_user(request:Request):
         else:
             ca_profile = user.caprofile # type: ignore
 
-        return Response({'success': True, 'CACode': ca_profile.CACode})
+        return Response({'success': True, 'CACoCe': ca_profile.CACode})
     except Exception as e:
         send_error_mail(inspect.stack()[0][3], request.data, e) 
         return error_response(f"Something went wrong: {str(e)}")
@@ -703,29 +703,16 @@ def verifyCA(request: Request):
         data = request.data
         # print("print:", data)
 
-        inputCAcode = data['CAcode'].strip()
+        inputCAcode = data['CACode'].strip()
         try:
             ca_profile = CAProfile.objects.get(CACode=inputCAcode)
-            if ca_profile.registration == -1:
-                ca_profile.registration = 0
-                user_email = ca_profile.user.get_username()
-                profile = Profile.objects.get(email = user_email)
-                username = profile.username
-                
-                # Send a confirmation email to the user
-                subject = "Petrichor Fest - Campus Ambassador Programme Verification"
-                message = f"Hello {username},\n\nCongratulations! Your Campus Ambassador account with CA code {inputCAcode} has been successfully verified."
-                from_mail = settings.EMAIL_HOST_USER
-                to_mail_ls = [user_email]
-                
-                send_mail(subject, message, from_mail, to_mail_ls, fail_silently=False)
-            
+
             return Response({
                 'status': 200,
                 'verified': True,
                 'message': "CA account has been verified and the user has been notified."
             })
-        except Profile.DoesNotExist:
+        except CAProfile.DoesNotExist:
             return Response({
                 'status': 404,
                 'verified': False,
@@ -754,7 +741,7 @@ def unverifyCA(request: Request):
         data = request.data
         # print("print:", data)
 
-        inputCAcode = data['CAcode'].strip()
+        inputCAcode = data['CACode'].strip()
         try:
             ca_profile = CAProfile.objects.get(CACode=inputCAcode)
             user_email = ca_profile.email
