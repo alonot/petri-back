@@ -507,6 +507,12 @@ def apply_event_paid(request: Request):
             event = Event.objects.get(event_id = event_id)
         except Event.DoesNotExist:
             return r500("No event exists with given event_id")
+
+        # Fees Calculation
+        if event.isTeam:
+            total_fee = event.fee * (len(participants) + 1)   # authenticated user not included in participants 
+        else:
+            total_fee = event.fee
         
         user = request.user
         if isinstance(user,AnonymousUser):
@@ -526,7 +532,8 @@ def apply_event_paid(request: Request):
             participants= TransactionTable.serialise_emails(participants),
             transaction_id=transactionId,
             verified=verified,
-            CACode=ca_profile
+            CACode=ca_profile,
+            total_fee = total_fee
         )
 
         for participant in participants:
