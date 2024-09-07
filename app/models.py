@@ -77,6 +77,7 @@ class TransactionTable(models.Model):
     transaction_id = models.TextField(primary_key=True)
     verified = models.BooleanField()
     CACode = models.ForeignKey(CAProfile,on_delete=models.SET_NULL,max_length=10, null=True)
+    total_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True)
 
     def get_participants(self):
         return TransactionTable.deserialize_emails(self.participants)
