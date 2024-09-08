@@ -73,9 +73,9 @@ EMAIL_SEPARATOR = '\n'
 class TransactionTable(models.Model):
     event_id = models.ForeignKey(Event, on_delete=models.PROTECT,null=True)
     user_id = models.ForeignKey(User,on_delete=models.PROTECT,null=True)
-    participants = models.TextField()
+    participants = models.TextField(default="")
     transaction_id = models.TextField(primary_key=True)
-    verified = models.BooleanField()
+    verified = models.BooleanField(default=False)
     CACode = models.ForeignKey(CAProfile,on_delete=models.SET_NULL,max_length=10, null=True)
     total_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True)
 

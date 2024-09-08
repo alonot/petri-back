@@ -15,7 +15,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.signing import SignatureExpired,BadSignature
 
 from utils import ResponseWithCode, get_email_from_token, get_forget_token, get_profile_data, get_profile_events,\
-r500,send_error_mail, method_not_allowed , send_forget_password_mail,error_response
+r500,send_error_mail, method_not_allowed, send_event_registration_mail , send_forget_password_mail,error_response
 from .models import EMAIL_SEPARATOR, Institute, Profile, TransactionTable,Event,CAProfile,UserRegistrations
 from django.db.utils import IntegrityError
 from django.utils.datastructures import MultiValueDictKeyError
@@ -471,6 +471,40 @@ def get_event_data(request):
             send_error_mail(inspect.stack()[0][3], request.data, e)
             return r500("Something Bad Happened")
 
+def updateUserRegTable(tableObject:TransactionTable,participants:list[str],transactionId:str,event_id:str):
+    # this checks if the participant is already registered for the event or not
+        AlreadyPresentIn = []
+        #####
+        AllUsers: list[UserRegistrations] = []
+        for participant in participants:
+            user_registration = UserRegistrations.objects.filter(email = participant).first()
+            if user_registration is not None:
+                trIds = TransactionTable.deserialize_emails(user_registration.transactionIds)
+                for trId in trIds:
+                    tr = TransactionTable.objects.filter(transaction_id= trId).first()
+                    if tr is not None and tr.event_id.event_id == event_id:
+                        AlreadyPresentIn.append(participant)
+                        break
+                user_registration.transactionIds = user_registration.transactionIds + EMAIL_SEPARATOR + transactionId
+
+                AllUsers.append(user_registration)
+            else:
+                user_reg = UserRegistrations(
+                    user = None, email = participant, 
+                    transactionIds = transactionId
+                ) 
+                AllUsers.append(user_reg)
+
+        # Check this above .save() to cancel any save operation
+        if len(AlreadyPresentIn) != 0:
+            return AlreadyPresentIn
+
+
+        tableObject.save()
+        for reg in AllUsers:
+            reg.save()
+
+        return []
 
 
 @api_view(['POST'])
@@ -492,16 +526,21 @@ def apply_event_paid(request: Request):
                 return r500("null transaction Id , key is transactionID")
             elif CAcode is None:
                 return r500("null CAcode Id , key is CACode")
+            elif participants is None:
+                return r500("null participants , key is participants")
 
         except KeyError as e:
             send_error_mail(inspect.stack()[0][3], request.data, e) 
             return error_response("Missing required fields: participants, eventId, and transactionId")
 
+        user = request.user
+        if isinstance(user,AnonymousUser):
+            return r500("Some error occured")
         
         
         # Check if participants' emails are from IIT Palakkad
         verified=False
-        if all(map(lambda x: x.endswith("smail.iitpkd.ac.in"), participants)): 
+        if all(map(lambda x: x.endswith("smail.iitpkd.ac.in"), participants + [user.email])): 
             verified=True
             transactionId=f"IIT Palakkad Student+{time.time()}"
 
@@ -520,13 +559,12 @@ def apply_event_paid(request: Request):
         else:
             total_fee = event.fee
         
-        user = request.user
-        if isinstance(user,AnonymousUser):
-            return r500("Some error occured")
         ca_profile = None
         try:
             if CAcode != "null":
                 ca_profile = CAProfile.objects.get(CACode = CAcode)
+                ca_profile.registration +=1
+                ca_profile.save()
         except CAProfile.DoesNotExist:
             return ResponseWithCode({"success":False},"CA user not found",439)  # frontend need to check for this code, and display appropiate message
         
@@ -542,19 +580,18 @@ def apply_event_paid(request: Request):
             total_fee = total_fee
         )
 
-        for participant in participants:
-            user_registration = UserRegistrations.objects.filter(email = participant).first()
-            if user_registration is not None:
-                user_registration.transactionIds = user_registration.transactionIds + EMAIL_SEPARATOR + transactionId
-                user_registration.asave() # type: ignore
-            else:
-                UserRegistrations.objects.acreate(
-                    user = None, email = participant, 
-                    transactionIds = transactionId
-                ) # type: ignore
+        
 
+        # Check this above .save() to cancel any save operation
+        regUsers =  updateUserRegTable(eventpaidTableObject,participants + [user.email], transactionId,event_id)
+        if len(regUsers) != 0:
+            return ResponseWithCode({
+                "success":False,
+                "registered_users": regUsers
+            },"Some/All Participants have already been registered for this event",500)
 
-        eventpaidTableObject.save()
+        send_event_registration_mail(participants + [user.email],event.name,verified)
+
         return ResponseWithCode({
             "success":True
         },"Event applied successfully")
@@ -572,7 +609,12 @@ def apply_event_free(request: Request):
 
     try:
         participants = data['participants']
-        event_id = data['eventId'].strip()
+        event_id = data['eventId']
+        if event_id is None:
+            return r500("null event Id , key is eventId")
+        elif participants is None:
+            return r500("null participants , key is participants")
+        event_id = event_id.strip()
 
     except KeyError as e:
         send_error_mail(inspect.stack()[0][3], request.data, e) 
@@ -581,7 +623,7 @@ def apply_event_free(request: Request):
     user = request.user
     
     try:
-        transaction_id = f"{user.id}+free+{time.time()}"
+        transaction_id = f"{user.id}free{time.time()}"
 
         try:
             event = Event.objects.get(event_id = event_id)
@@ -597,25 +639,23 @@ def apply_event_free(request: Request):
             verified=True
         )
 
+        # Check this above .save() to cancel any save operation
+        regUsers =  updateUserRegTable(eventfreeTableObject,participants + [user.email], transaction_id,event_id)
+        if len(regUsers) != 0:
+            return ResponseWithCode({
+                "success":False,
+                "registered_users": regUsers
+            },"Some/All Participants have already been registered for this event",500)
 
-        for participant in participants:
-            user_registration = UserRegistrations.objects.filter(email = participant).first()
-            if user_registration is not None:
-                user_registration.transactionIds = user_registration.transactionIds + EMAIL_SEPARATOR + transaction_id
-                user_registration.asave() # type: ignore
-            else:
-                UserRegistrations.objects.acreate(
-                    user = None, email = participant, 
-                    transactionIds = transaction_id
-                ) # type: ignore
+        send_event_registration_mail(participants + [user.email],event.name,True)
 
-        eventfreeTableObject.save()
         return ResponseWithCode({
             "success":True
         },"Event applied successfully")
 
     except Exception as e:
         send_error_mail(inspect.stack()[0][3], request.data, e) 
+        print(e)
         return error_response(f"Something went wrong: {str(e)}")
 
 
@@ -710,7 +750,7 @@ def verifyCA(request: Request):
             return Response({
                 'status': 200,
                 'verified': True,
-                'message': "CA account has been verified and the user has been notified."
+                'message': "CACode verified."
             })
         except CAProfile.DoesNotExist:
             return Response({
