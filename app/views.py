@@ -532,6 +532,7 @@ def apply_event_paid(request: Request):
         except KeyError as e:
             send_error_mail(inspect.stack()[0][3], request.data, e) 
             return error_response("Missing required fields: participants, eventId, and transactionId")
+        
 
         user = request.user
         if isinstance(user,AnonymousUser):
@@ -552,10 +553,26 @@ def apply_event_paid(request: Request):
             event = Event.objects.get(event_id = event_id)
         except Event.DoesNotExist:
             return r500("No event exists with given event_id")
+        
+                
+        # Total participants including the authenticated user
+        total_participants = len(participants) + 1
 
-        # Fees Calculation
+        # Check for individual event
+        if not event.isTeam:
+            if total_participants != 1:
+                return r500("Individual events require exactly 1 participant.")
+
+        # Check for team event
+        else:
+            if not (event.minMember <= total_participants <= event.maxMember):
+                return r500(f"Team events require between {event.minMember} and {event.maxMember} participants.")
+
+
+        # # Fees Calculation
+        
         if event.isTeam:
-            total_fee = event.fee * (len(participants) + 1)   # authenticated user not included in participants 
+            total_fee = event.fee * total_participants   # authenticated user not included in participants 
         else:
             total_fee = event.fee
         
@@ -629,7 +646,23 @@ def apply_event_free(request: Request):
             event = Event.objects.get(event_id = event_id)
         except Event.DoesNotExist:
             return r500("No event exists with given event_id")
+        
+        
+        
+        # Total participants including the authenticated user
+        total_participants = len(participants) + 1
 
+        # Check for individual event
+        if not event.isTeam:
+            if total_participants != 1:
+                return r500("Individual events require exactly 1 participant.")
+
+        # Check for team event
+        else:
+            if not (event.minMember <= total_participants <= event.maxMember):
+                return r500(f"Team events require between {event.minMember} and {event.maxMember} participants.")
+            
+            
         # Create a new event record
         eventfreeTableObject = TransactionTable(
             event_id=event,
@@ -657,6 +690,7 @@ def apply_event_free(request: Request):
         send_error_mail(inspect.stack()[0][3], request.data, e) 
         print(e)
         return error_response(f"Something went wrong: {str(e)}")
+
 
 
 @api_view(['POST'])
