@@ -80,7 +80,7 @@ class EventApplicationTests(TestCase):
             'CACode': self.CACode,
         }, format='json',HTTP_AUTHORIZATION=f"Bearer {self.token}")
 
-        print(response.status_code, response.json())  # Debug print
+        # print(response.status_code, response.json())  # Debug print
         self.assertEqual(response.status_code, 200)
         self.assertEqual(TransactionTable.objects.count(), 1)
         transaction = TransactionTable.objects.first()

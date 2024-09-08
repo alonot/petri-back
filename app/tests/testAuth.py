@@ -7,7 +7,7 @@ from django.test import Client
 from app.models import Institute, User,Profile,CAProfile,UserRegistrations
 from django.urls import reverse
 
-# to run use - py manage.py test app/test/
+# to run use - py manage.py test app/tests/
 
 # coverage run manage.py test app/tests --keepdb
 # coverage report
@@ -123,7 +123,7 @@ class RegisterTest(TestCase):
             "institype": "college",
             "stream": "<h1>Hello Motto</h1>"
         })
-        print(response.content)
+        # print(response.content)
         self.assertEqual(response.status_code, 500)
 
     def test_RegisterGoodData2(self):

@@ -12,17 +12,19 @@ urlpatterns = [
 
     ####
     path('auth/',views.authenticated,name='checks'),
-    path('auth/event/',views.get_event_data,name="getEvent"),    
-    path('auth/events/apply/paid',views.apply_event_paid ,name="applyEventpaid"),
-    path('auth/events/apply/free',views.apply_event_free ,name="applyEventfree"),
+
+    ####
+    path('auth/event/',views.get_event_data,name="getEvent"),     # add isTeam Aditya
+    path('auth/events/apply/paid',views.apply_event_paid ,name="applyEventpaid"), # review  add fee calculation Priyanshu
+    path('auth/events/apply/free',views.apply_event_free ,name="applyEventfree"), # review  Aditya
     ###
+
+
     path('send_grievance',views.send_grievance,name="send_grievance"),
 
     ###
     path('auth/CA/create/', views.create_ca_user, name='create_ca_user'),
-    # path('auth/CA/get/', views.create_ca_user, name='get_ca_user'),
-    path('CA/verify/', views.verifyCA, name='verifyCA'),
-    path('CA/unverify/', views.unverifyCA, name='unverifyCA'),
+    # path('CA/verify/', views.verifyCA, name='verifyCA'),  # changes needed Chirag
     ###
 
 ]
