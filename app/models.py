@@ -17,7 +17,7 @@ class Institute(models.Model):
 class Profile(models.Model):
     username = models.TextField()
     user = models.OneToOneField(User,primary_key=True,on_delete=models.CASCADE)
-    phone = models.CharField(max_length=25)
+    phone = models.CharField(max_length=10)
     instituteID = models.ForeignKey(Institute,on_delete=models.SET_NULL,null=True, max_length=255)
     gradYear = models.IntegerField(default=6969)
     stream = models.TextField(null=True)
@@ -72,11 +72,11 @@ EMAIL_SEPARATOR = '\n'
 class TransactionTable(models.Model):
     event_id = models.ForeignKey(Event, on_delete=models.PROTECT,null=True)
     user_id = models.ForeignKey(User,on_delete=models.PROTECT,null=True)
-    participants = models.TextField()
+    participants = models.TextField(default="")
     transaction_id = models.TextField(primary_key=True)
-    # fee
-    verified = models.BooleanField()
+    verified = models.BooleanField(default=False)
     CACode = models.ForeignKey(CAProfile,on_delete=models.SET_NULL,max_length=10, null=True)
+    total_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True)
 
     def get_participants(self):
         return TransactionTable.deserialize_emails(self.participants)

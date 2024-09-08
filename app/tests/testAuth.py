@@ -39,7 +39,7 @@ class RegisterTest(TestCase):
             "gradyear": 2024,
             "institype": "college",
             "stream": "cse"
-        }) 
+        })
         user = User.objects.filter(username = "alo@fsg.com").first()
         self.assertNotEqual(user,None)
         self.assertEqual(response.status_code, 200)
@@ -49,7 +49,83 @@ class RegisterTest(TestCase):
         self.assertNotEqual(user_regs,None)
         institute = Institute.objects.count()
         self.assertEqual(institute,1)
+
+    def test_RegisterTestData4(self):
+        '''Testing on crooked data based on model'''
+        response = testClient.post(self.register_url, {
+            "username": "Dhruvadeep_Cli.asent_0001<h1>p</h1>", # wrong format
+            "email": "dhruvadeep.dev",
+            "password": "qwerty123",
+            # Phone length to 25 length
+            "phone": 127612123,
+            "college": "<strong>Test HTML</strong>",
+            "gradeyear": 1970,
+            "institype": "college",
+            "stream": "<h1>Hello Motto</h1>"
+        })
+        self.assertEqual(response.status_code, 500)
+
+    def test_RegisterTestData3(self):
+        '''Testing on crooked data based on model'''
+        response = testClient.post(self.register_url, {
+            "username": "Dhruvadeep_Client_0001",
+            "email": "dhruvadeep@gmail.dev",
+            "password": "1.>12234123132",
+            # Phone length to 25 length
+            "phone": "1213412134",
+            "college": "<strong>Test HTML</strong>",
+            "gradyear": 1970,
+            "institype": "college",
+            "stream": "<h1>Hello Motto</h1>"
+        })
+        self.assertEqual(response.status_code, 500)
+
+    def test_RegisterTestData5(self):
+        '''Testing on crooked data based on model'''
+        response = testClient.post(self.register_url, {
+            "username": "Dhruvadeep_Client_0001",
+            "email": "dhruvadeep@gmail.dev",
+            "password": "112234123132",
+            # Phone length to 25 length
+            "phone": "1213412134",
+            "college": "<strong>Test HTML</strong>",
+            "gradyear": 1970,
+            "institype": "college",
+            "stream": "<h1>Hello Motto</h1>"
+        })
+        self.assertEqual(response.status_code, 500)
         
+    def test_RegisterTestData6(self):
+        '''Testing on crooked data based on model'''
+        response = testClient.post(self.register_url, {
+            "username": "Dhruvadeep_Client_0001",
+            "email": "dhruvadeep@gmail.dev",
+            "password": "112234123132",
+            # Phone length to 25 length
+            "phone": "1213412134",
+            "college": "asdasd",
+            "gradyear": 1970,
+            "institype": "college",
+            "stream": "<h1>Hello Motto</h1>"
+        })
+        self.assertEqual(response.status_code, 500)
+
+    def test_RegisterTestData7(self):
+        '''Testing on crooked data based on model'''
+        response = testClient.post(self.register_url, {
+            "username": "Dhruvadeep_Client_0001",
+            "email": "dhruvadeep@gmail.dev",
+            "passrd": "112234123132",
+            # Phone length to 25 length
+            "phone": "1213412134",
+            "college": "<strong>Test HTML</strong>",
+            "gradear": 1970,
+            "institype": "college",
+            "stream": "<h1>Hello Motto</h1>"
+        })
+        print(response.content)
+        self.assertEqual(response.status_code, 500)
+
     def test_RegisterGoodData2(self):
         '''
             Test2 on a correct data but institute is already created

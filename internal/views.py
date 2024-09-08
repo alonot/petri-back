@@ -1,9 +1,11 @@
 
 import inspect
 import json
-from django.http import JsonResponse
+from django.http import HttpRequest, JsonResponse, QueryDict
 from app.models import *
 from rest_framework.response import Response
+from rest_framework.request import Request
+
 from rest_framework.decorators import api_view
 
 from utils import send_error_mail,r200, r500 , send_delete_transaction_mail
@@ -166,13 +168,31 @@ def addEvent(request):
         data=request.data
         if data == None:
             return r500("Please send some info about the event")
+        eventId = data.get("event_id" , None)
+        if eventId is None:
+            return r500("Event Id is missing")
+        name = data.get("name" , None)
+        if name is None:
+            return r500("Event name is missing")
+        fee = data.get("fee" , None)
+        if fee is None:
+            return r500("Event fees is missing")
+        minMember = data.get("minMember", None)
+        if minMember is None:
+            return r500("minMember is missing")
+        maxMember = data.get("maxMember" , None)
+        if maxMember is None:
+            return r500("maxMember is missing")
+        isTeam = data.get("isTeam" , None)
+        if isTeam is None:
+            return r500("isTeam is missing")
         event = Event.objects.create(
-            eventId=data["id"],
-            name=data["name"],
-            fee=data["fees"],
-            minMember=data["minMemeber"],
-            maxMember=data["maxMemeber"]
-        )
+            event_id = eventId ,
+            name =  name ,
+            fee = fee ,
+            minMember = minMember ,
+            maxMember = maxMember ,
+            isTeam = isTeam)
         event.save()
         print('done')
         return r200("Event saved successfully")
@@ -183,28 +203,36 @@ def addEvent(request):
 
 
 @api_view(["POST"])
-def updateEvent(request):
+def updateEvent(request: Request):
     try:
         data=request.data
-        if data:
-            dt_eventId=data['eventId']
-            if dt_eventId is not None:
+        if isinstance(data, (dict, QueryDict)):
+            print(data)
+            dt_eventId = data.get("event_id")
+            if dt_eventId is None:
                 return r500('Please provide an eventId')
-            dt_name=data['name']
-            dt_fee=data['fee']
-            dt_minMember=data['minMember']
-            dt_maxMember=data['maxMember']
+            dt_name=data.get("name")
+            dt_fee=data.get("fee")
+            dt_minMember=data.get("minMember")
+            dt_maxMember=data.get("maxMember")
+            dt_isTeam=data.get("isTeam")
 
-            event= Event.objects.get(eventId=dt_eventId)
+            print("wd")
+            event = Event.objects.filter(event_id=dt_eventId).first()
+            if event is None:
+                return r500(f'No event found with eventId {dt_eventId}')
             # print(event.name,event.fee,dt_fee)
-            if dt_name is not None:
+
+            if dt_name is not None and dt_name!= "":
                 event.name=dt_name
             if dt_fee is not None:
-                event.fee=dt_fee
+                event.fee=int(dt_fee)
             if dt_minMember is not None:
-                event.minMember=dt_minMember
+                event.minMember=int(dt_minMember)
             if dt_maxMember is not None:
-                event.maxMember=dt_maxMember
+                event.maxMember=int(dt_maxMember)
+            if dt_isTeam is not None:
+                event.isTeam=bool(dt_isTeam)
 
             event.save()
 
