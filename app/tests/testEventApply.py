@@ -49,7 +49,7 @@ class EventApplicationTests(TestCase):
             'CAcode': 'CA001'
         }, content_type="application/json")
 
-        print(response.status_code, response.json())  # Debug print
+        # print(response.status_code, response.json())  # Debug print
         self.assertEqual(response.status_code, 200)
         self.assertEqual(TransactionTable.objects.count(), 1)
         transaction = TransactionTable.objects.first()

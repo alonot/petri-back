@@ -123,7 +123,7 @@ class RegisterTest(TestCase):
             "institype": "college",
             "stream": "<h1>Hello Motto</h1>"
         })
-        print(response.content)
+        # print(response.content)
         self.assertEqual(response.status_code, 500)
 
     def test_RegisterGoodData2(self):

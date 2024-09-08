@@ -709,7 +709,7 @@ def create_ca_user(request:Request):
         else:
             ca_profile = user.caprofile # type: ignore
 
-        return Response({'success': True, 'CACoCe': ca_profile.CACode})
+        return Response({'success': True, 'CACode': ca_profile.CACode})
     except Exception as e:
         send_error_mail(inspect.stack()[0][3], request.data, e) 
         return error_response(f"Something went wrong: {str(e)}")
