@@ -572,7 +572,7 @@ def apply_event_paid(request: Request):
         
         ca_profile = None
         try:
-            if CAcode != "null" or CAcode != "":
+            if CAcode != "null" and CAcode != "":
                 ca_profile = CAProfile.objects.get(CACode = CAcode)
                 ca_profile.registration +=1
                 ca_profile.save()
