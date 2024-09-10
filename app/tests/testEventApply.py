@@ -70,15 +70,19 @@ class EventApplicationTests(TestCase):
             'password':'123w123qe'
         })
         self.token = json.loads(response.content)['token']
+        response = self.client.post('/api/auth/CA/create/', {}, format='json',headers={
+            'Authorization': f"Bearer {self.token}"
+        })
+        self.CACode = CAProfile.objects.first().CACode
         response  = testClient.post('/api/login/',{
             'username':'csk20020@gmail.com',
             'password':'123w123qe'
         })
         self.token_non_insti = json.loads(response.content)['token']
         response = self.client.post('/api/auth/CA/create/', {}, format='json',headers={
-            'Authorization': f"Bearer {self.token}"
+            'Authorization': f"Bearer {self.token_non_insti}"
         })
-        self.CACode = CAProfile.objects.first().CACode
+        self.CACode2 = CAProfile.objects.all()[1].CACode 
 
 
     def test_apply_event_team(self):
@@ -89,7 +93,7 @@ class EventApplicationTests(TestCase):
             'participants': ['testuser1@smail.iitpkd.ac.in', 'testuser2@smail.iitpkd.ac.in'],
             'eventId': self.event_team.event_id,
             'transactionID': 'TXN002',
-            'CACode': self.CACode,
+            'CACode': self.CACode2
         }, format='json',HTTP_AUTHORIZATION=f"Bearer {self.token}")
 
         # print(response.status_code, response.json())  # Debug print
@@ -109,7 +113,7 @@ class EventApplicationTests(TestCase):
             'participants': [ ],
             'eventId': self.event_individual.event_id,
             'transactionID': 'TXN003',
-            'CACode': self.CACode
+            'CACode': self.CACode2
         }, format='json',HTTP_AUTHORIZATION=f"Bearer {self.token}")
 
         # # print(response.status_code, response.json())  # Debug print
@@ -126,17 +130,17 @@ class EventApplicationTests(TestCase):
             'participants': ['testuser1@gmail.com'],
             'eventId': self.event_team.event_id,
             'transactionID': 'TXN007',
-            'CACode': self.CACode
+            'CACode': self.CACode2
         }, format='json', HTTP_AUTHORIZATION=f"Bearer {self.token}")
         
-        # print(response1.status_code, response1.json())
+        print(response1.status_code, response1.json())
         self.assertEqual(response1.status_code, status.HTTP_200_OK)
 
         response2 = self.client.post(reverse('applyEventpaid'), {
             'participants': ['testuser2@gmail.com'],
             'eventId': self.event_team_2.event_id,
             'transactionID': 'TXN007',
-            'CACode': self.CACode
+            'CACode': self.CACode2
         }, format='json', HTTP_AUTHORIZATION=f"Bearer {self.token}")
         
            # Debugging output
@@ -153,7 +157,7 @@ class EventApplicationTests(TestCase):
             'participants': ['noniituser@example.com'],
             'eventId': self.event_team.event_id,
             'transactionID': 'TXN005',
-            'CACode': self.CACode
+            'CACode': self.CACode2
         }, format='json', HTTP_AUTHORIZATION=f"Bearer {self.token}")
         
         # print(response.status_code, response.json()) 
@@ -167,10 +171,10 @@ class EventApplicationTests(TestCase):
             'participants': ['noniituserexample.com',''],
             'eventId': self.event_team.event_id,
             'transactionID': 'TXN005',
-            'CACode': self.CACode
+            'CACode': self.CACode2
         }, format='json', HTTP_AUTHORIZATION=f"Bearer {self.token}")
         
-        # print(response.status_code, response.json()) 
+        print(response.status_code, response.json()) 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(TransactionTable.objects.count(), 1)
         transaction = TransactionTable.objects.first()
@@ -194,14 +198,14 @@ class EventApplicationTests(TestCase):
             'participants': ['testuser1@smail.iitpkd.ac.in'],
             'eventId': self.event_team.event_id,
             'transactionID': 'TXN007',
-            'CACode': self.CACode
+            'CACode': self.CACode2
         }, format='json', HTTP_AUTHORIZATION=f"Bearer {self.token}")
         # print(response.status_code, response.json()) 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(TransactionTable.objects.count(), 1)
         transaction = TransactionTable.objects.first()
         self.assertTrue(transaction.verified)
-        self.assertEqual(transaction.CACode.CACode, self.CACode)
+        self.assertEqual(transaction.CACode.CACode, self.CACode2)
     
     
     
@@ -210,7 +214,7 @@ class EventApplicationTests(TestCase):
             'participants': ['testuser1@smail.iitpkd.ac.in', 'testuser2@smail.iitpkd.ac.in', 'testuser3@smail.iitpkd.ac.in'],
             'eventId': self.event_team_2.event_id,
             'transactionID': 'TXN010',
-            'CACode': self.CACode
+            'CACode': self.CACode2
         }, format='json', HTTP_AUTHORIZATION=f"Bearer {self.token}")
 
         # print(response.status_code, response.json())
@@ -224,7 +228,7 @@ class EventApplicationTests(TestCase):
             'participants': ['testuser1@smail.iitpkd.ac.in', 'testuser2@smail.iitpkd.ac.in'],
             'eventId': self.event_individual.event_id,
             'transactionID': 'TXN013',
-            'CACode': self.CACode
+            'CACode': self.CACode2
         }, format='json', HTTP_AUTHORIZATION=f"Bearer {self.token}")
 
         # print(response.status_code, response.json())
@@ -238,7 +242,7 @@ class EventApplicationTests(TestCase):
             'participants': ['csk20020@gmail.com'],  # This is not the logged-in user's email
             'eventId': self.event_team.event_id,
             'transactionID': 'TXN008',
-            'CACode': self.CACode
+            'CACode': self.CACode2
         }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
         
         # print(response1.status_code, response1.json())
