@@ -147,3 +147,31 @@ Main website will call using this url:
     }
     ```
 
+Expected on finanace page
+```
+export type Payment = {
+    name: string,
+    transId: string,
+    amount: number,
+    parts: number,
+    verified: boolean
+    CA: string
+}
+
+export type member = {
+    name: string,
+    email: string,
+    phone: string,
+}
+
+export type data = {
+    data: {
+        [name:string]:[
+                {
+                    user: Payment,
+                    members: member[]
+                }
+            ]
+    }
+}
+```

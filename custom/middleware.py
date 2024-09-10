@@ -40,14 +40,14 @@ class PetrichorAuthMiddleware(object):
             exempt = False
                 # break
 
+        resp_data = {
+            "refreshed": False,
+            "loggedIn":False
+        }
         if not exempt:
-            resp_data = {
-                "refreshed": False,
-                "loggedIn":False
-            }
             token = None
             try:
-                user = PetrichorAuthenticator.authenticate(request)
+                user = PetrichorAuthenticator.authenticate(request)  # type: ignore
                 if user is not None:  # If we got some data here, then user is already authorized
                     resp_data['loggedIn'] = True
                     token = None
@@ -83,13 +83,13 @@ class PetrichorAuthMiddleware(object):
                 # if user is not logged then returning the response from here only. 
                 # The request does goes further to any middleware or the target view
                 return HttpResponse(json.dumps(resp_data),content_type='application/json',status=403)
-            resp_data['access'] = token
+            resp_data['access'] = token # type: ignore
             if not resp_data['loggedIn']:
                 resp_data.update({
                     "success":False,
                     "message":"Not Logged in",
                     "status":403
-                })
+                }) # type: ignore
                 # if user is not logged then returning the response from here only. 
                 # The request does goes further to any middleware or the target view
                 return HttpResponse(json.dumps(resp_data),content_type='application/json',status=403)
@@ -101,10 +101,10 @@ class PetrichorAuthMiddleware(object):
 
         # if everything went correctly then we will append the log in details with the response
         if not exempt and hasattr(response,'data'):
-            resp_data.update((response.data))
-            response.data = resp_data
-            response.content = json.dumps(response.data)
-
+            resp_data.update((response.data)) # type: ignore
+            response.data = resp_data # type: ignore
+            response.content = json.dumps(response.data) # type: ignore
+        # print(response.content)
         return response
 
     def process_view(self, request:HttpRequest, view_func, view_args, view_kwargs):

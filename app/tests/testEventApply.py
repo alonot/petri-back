@@ -20,10 +20,13 @@ class EventApplicationTests(TestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.user= User(username = "csk20020@gmail.com", email = "csk20020@smail.iitpkd.ac.in" )
+        self.user= User(username = "csk20020@smail.iitpkd.ac.in", email = "csk20020@smail.iitpkd.ac.in" )
 
         self.user.set_password("123w123qe")
         self.user.save()
+        self.user_non_insti= User(username = "csk20020@gmail.com", email = "csk20020@gmail.com" )
+        self.user_non_insti.set_password("123w123qe")
+        self.user_non_insti.save()
         
     # Other setup code...
 
@@ -31,6 +34,10 @@ class EventApplicationTests(TestCase):
         self.profile = Profile.objects.create(
             username='testuser',
             user=self.user
+        )
+        self.profile_non_insti = Profile.objects.create(
+            username='testuser2',
+            user=self.user_non_insti
         )
         
         self.event_team = Event.objects.create(
@@ -59,10 +66,15 @@ class EventApplicationTests(TestCase):
             isTeam=False
         )
         response  = testClient.post('/api/login/',{
-            'username':'csk20020@gmail.com',
+            'username':'csk20020@smail.iitpkd.ac.in',
             'password':'123w123qe'
         })
         self.token = json.loads(response.content)['token']
+        response  = testClient.post('/api/login/',{
+            'username':'csk20020@gmail.com',
+            'password':'123w123qe'
+        })
+        self.token_non_insti = json.loads(response.content)['token']
         response = self.client.post('/api/auth/CA/create/', {}, format='json',headers={
             'Authorization': f"Bearer {self.token}"
         })
@@ -223,7 +235,7 @@ class EventApplicationTests(TestCase):
     def test_apply_event_paid_duplicate_registration_user_email(self):
     # First registration attempt
         response1 = self.client.post(reverse('applyEventpaid'), json.dumps({
-            'participants': ['testuser1@smail.iitpkd.ac.in'],  # This is not the logged-in user's email
+            'participants': ['csk20020@gmail.com'],  # This is not the logged-in user's email
             'eventId': self.event_team.event_id,
             'transactionID': 'TXN008',
             'CACode': self.CACode
@@ -235,15 +247,15 @@ class EventApplicationTests(TestCase):
         self.assertEqual(response1.status_code, 200)
         self.assertEqual(TransactionTable.objects.count(), 1)
         transaction1 = TransactionTable.objects.first()
-        self.assertTrue(transaction1.verified)
+        self.assertFalse(transaction1.verified)
         
         # Second registration attempt with the logged-in user's email as a participant
         response2 = self.client.post(reverse('applyEventpaid'), json.dumps({
-            'participants': ['testuser1@smail.iitpkd.ac.in'],  # This is the logged-in user's email
+            'participants': ['csk20020@smail.iitpkd.ac.in'],  # This is the logged-in user's email
             'eventId': self.event_team.event_id,
             'transactionID': 'TXN009',
             'CACode': self.CACode
-        }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
+        }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token_non_insti}")
         
         # print(response2.status_code, response2.json())
         
@@ -327,8 +339,7 @@ class EventApplicationTests(TestCase):
         # print(response.status_code, response.json())
         self.assertEqual(response.status_code, 500)
         response_data = response.json()
-        self.assertIn('error', response_data)
-        self.assertTrue('participants' in response_data['error'].lower())
+        self.assertTrue('participants' in response_data['message'].lower())
     
     def test_apply_event_free_duplicate_registration_user_email(self):
     # First registration attempt

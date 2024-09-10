@@ -15,8 +15,8 @@ urlpatterns = [
 
     ####
     path('auth/event/',views.get_event_data,name="getEvent"),     # add isTeam Aditya
-    path('auth/events/apply/paid',views.apply_event_paid ,name="applyEventpaid"), # review  add fee calculation Priyanshu
-    path('auth/events/apply/free',views.apply_event_free ,name="applyEventfree"), # review  Aditya
+    path('auth/events/apply/paid/',views.apply_event_paid ,name="applyEventpaid"), # review  add fee calculation Priyanshu
+    path('auth/events/apply/free/',views.apply_event_free ,name="applyEventfree"), # review  Aditya
     ###
 
 
@@ -24,7 +24,7 @@ urlpatterns = [
 
     ###
     path('auth/CA/create/', views.create_ca_user, name='create_ca_user'),
-    # path('CA/verify/', views.verifyCA, name='verifyCA'),  # changes needed Chirag
+    path('CA/verify/', views.verifyCA, name='verifyCA'),  # changes needed Chirag
     ###
 
 ]

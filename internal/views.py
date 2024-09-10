@@ -1,4 +1,6 @@
 
+from collections import defaultdict
+from functools import lru_cache
 import inspect
 import json
 from django.http import HttpRequest, JsonResponse, QueryDict
@@ -8,36 +10,14 @@ from rest_framework.request import Request
 
 from rest_framework.decorators import api_view
 
-from utils import send_error_mail,r200, r500 , send_delete_transaction_mail, send_event_verification_mail
+from utils import ResponseWithCode, r200, r500 , send_delete_transaction_mail, send_error_mail, send_event_verification_mail
 
-
-
-# @DeprecationWarning
-def getEventUsers(request):
-    '''
-        Fetch all the users related to the given event ID
-    '''
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        eventid = data.get('eventid')
-        
-        try:
-            event = Event.objects.get(id=eventid)
-        except Event.DoesNotExist:
-            return JsonResponse({'error': 'Petrichor event not found'}, status=404)
-        
-        if event.fee == 0:
-            participants = EventFreeTable.objects.filter(event=event).values_list('email', flat=True)
-        else:
-            participants = EventPaidTable.objects.filter(event=event).values_list('email', flat=True)
-        
-        #Here we will be returning the list of all the participants in the list format 
-        return JsonResponse(list(participants), safe=False)
 
 
 
 #This is Transaction IDS
 #Here i am just iteration through all the transaction ids and marking them true or false or success if that transaction id exists in the req which i will get 
+@api_view(['POST'])
 def verifyTR(request):
     '''
         send Event verified mail to the users
@@ -53,19 +33,37 @@ def verifyTR(request):
         for transaction_id in transaction_ids:
             try:
                 transaction = TransactionTable.objects.get(transaction_id=transaction_id)
+                if transaction.verified:
+                    failed_transactions.append(transaction_id)
+                    continue
                 transaction.verified = True
+                CA = transaction.CACode
+                if CA:
+                    CA.registration +=1
+                    CA.save()
+
                 # send mail to user
-                send_event_verification_mail(transaction.user_id.email + [TransactionTable.deserialize_emails(transaction.participants)],
-                                             transaction.transaction_id,transaction.event_id.name)
+                user = transaction.user_id
+                if user and transaction.event_id:
+                    send_event_verification_mail([user.email] + TransactionTable.deserialize_emails(transaction.participants),
+                                                transaction.transaction_id,transaction.event_id.name)
                 #
                 transaction.save()
             except TransactionTable.DoesNotExist:
+                print(transaction_id)
                 failed_transactions.append(transaction_id)
+
+            except Exception as e:
+                print(e)
+                 # we are taking any exception here to store in failed list and then tell frontend about it
+                send_error_mail(inspect.stack()[0][3], "verify:" + transaction_ids.__str__(), e)
+                failed_transactions.append(transaction_id)
+                
         
-        return JsonResponse({
-            'status': 'success',
+        return ResponseWithCode({
+            'success': True,
             'failed_transactions': failed_transactions
-        })
+        },"Success")
 
 @api_view(['GET'])
 def unverifTR(request):
@@ -123,54 +121,11 @@ def cancelTR(request):
 
 
 
-
 @api_view(['POST'])
-def cancelTR(request):
-    try:
-        data = json.loads(request.body)
-        transaction_notfound = []
-        for item in data:
-            # Process each JSON object in the array
-            transaction_id = item.get('transaction_id')
-            email = item.get('email')
-            transaction = TransactionTable.objects.get(transaction_id=transaction_id)
-            if transaction is not None :
-                event_id = transaction.event_id
-                event_name = Event.objects.filter(event_id = event_id).name
-                transaction.delete()
-                send_delete_transaction_mail(email , event_name)
-            else:
-                transaction_notfound.append(transaction_id)
-        if len(transaction_notfound) == 0:
-            return JsonResponse({
-                'success' : True,
-                'message' : 'All mails sent'
-            })
-        else:
-            return JsonResponse({
-                'success' : False ,
-                'message' : 'Some ids were not found',
-                'transaction_notfound' : transaction_notfound
-            })
-    except TransactionTable.DoesNotExist:
-        return JsonResponse({
-            'success' : False ,
-            'error': 'Transaction not found'
-            }, status=404)
-    except json.JSONDecodeError:
-        return JsonResponse({
-            'success' : False ,
-            'error': 'Invalid JSON'
-            }, status=400)
-
-
-
-
-@api_view(['POST'])
-def addEvent(request):
+def addEvent(request:Request):
     try:
         data=request.data
-        if data == None:
+        if data == None or not isinstance(data,(dict,QueryDict)):
             return r500("Please send some info about the event")
         eventId = data.get("event_id" , None)
         if eventId is None:
@@ -211,7 +166,6 @@ def updateEvent(request: Request):
     try:
         data=request.data
         if isinstance(data, (dict, QueryDict)):
-            print(data)
             dt_eventId = data.get("event_id")
             if dt_eventId is None:
                 return r500('Please provide an eventId')
@@ -248,62 +202,83 @@ def updateEvent(request: Request):
         return r500(f'Error: {e}')
 
 @api_view(['POST'])
-def display_sheet(request):
+# @lru_cache()
+def display_sheet(request:Request):
     '''
-    Takes in eventID from the request and returns the
-    participants of that event in json
+    Returns the
+    participants of all events in json
     '''
-    data = request.data
-    eventID = data['id'] if data != None else None
-    if eventID:
-        return getDataFromID(eventID)
+    # eventID = data['id'] if data != None else None
+    
+    data,valid = (getDataFromID())
+    if valid:
+        return ResponseWithCode({
+            "data":data,
+            "success":True
+        },"Data Fetched")
+    else :
+        return r500("Fetch failed")
+    
 
 # @lru_cache()
-def getDataFromID(eventID):
+# this lru cache is leading to wrong(previous data) there in finanace page
+def getDataFromID() -> tuple[dict,bool]:
     '''
-        add  fee column
-        add 
+        
     '''
     try:
-        teamlst = TransactionTable.objects.filter(eventId=eventID)
-        teamdict = {}  # info of each team
-        participants = []  # participants to be added
-
+        teamlst = TransactionTable.objects.all()
+        allEvents = defaultdict(list)
+        
         for i, team in enumerate(teamlst):
             partis = team.get_participants()
-            teamdict['team'] = f"Team{i + 1}"
-            teamdict["details"] = []
-            for part in partis:
-                try:
-                    prof = Profile.objects.get(email=part)
-                    # prof = get_profile_from_email(part)
-                    detail = {
-                            "name": f"{prof.username}",
-                            "email": f"{part}",
-                            "phone": f"{prof.phone}",
-                            "CA": f"{team.CACode}",
-                            "verified":f"{team.verified}"
-                        }
-                except Profile.DoesNotExist:
-                    detail = {
-                            "name": f"not registered",
-                            "email": f"{part}",
-                            "phone": f"not registered",
-                            "CA": f"{team.CACode}",
-                            "verified":f"{team.verified}"
-                        }
-                teamdict["details"].append(detail.copy())
-
-            participants.append(teamdict.copy())
-
-        event = {
-                "name": f"{Event.objects.get(eventId=eventID).name}",
-                # "name": f"{get_event_from_id(eventID)['name']}",
-                "participants": participants
+            CACode = None
+            if team.CACode:
+                CACode = team.CACode.CACode
+            payment = {
+                "name":team.user_id.profile.username, #type:ignore
+                "transId":team.transaction_id,
+                "amount":team.total_fee,
+                "CA":CACode,
+                "parts":len(partis) + 1,
+                "verified": team.verified
             }
-
-        return Response(event,"Event Data fetched successfully")
+            members = []
+            if team.user_id:
+                members.append({
+                    "name":team.user_id.profile.username, # type:ignore
+                    "email":team.user_id.email,
+                    "phone":team.user_id.profile.phone, # type:ignore
+                })
+            for part in partis:
+                if part == "": continue
+                user = User.objects.filter(username=part).first() # indexing by User as username is its rimary key so faster access
+                
+                if user is not None:
+                    prof:Profile = user.profile # type:ignore
+                    members.append({
+                        "name":prof.username, # type:ignore
+                        "email":part,
+                        "phone":prof.phone,
+                    })
+                else:
+                    members.append( {
+                        "name":"******",
+                        "email":part,
+                        "phone":"********"
+                    })
+            if team.event_id:
+                allEvents[team.event_id.event_id +":" + team.event_id.name].append({
+                    "members":members,
+                    "payment":payment
+                })
+            else:
+                allEvents["Deleted Events"].append({
+                    "members":members,
+                    "payment":payment
+                }) 
+               
+        return allEvents,True
     except Exception as e:
-        print(e)
-        # send_error_mail(inspect.stack()[0][3], request.data, e)
-        return r500(f'Error: {e}')
+        send_error_mail(inspect.stack()[0][3], "GETEVENTS", e)
+        return {},False
