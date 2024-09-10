@@ -132,6 +132,18 @@ def send_event_registration_mail(emails,event,verified):
     send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=True, html_message=message)
     return True
 
+def send_event_verification_mail(emails, trIds,event):
+    subject = 'Petrichor Event: ' + event
+    message = (f'''We have <strong>verified</strong> your registration for the event :{event} with given transactionId: {trIds}. Please visit the website for venue and date. You can also contact us here 
+      <a href="https://petrichor.events/contactUs">Contact Us</a>
+    ''')
+    message +="<br> Thank you for participating in Petrichor'25."
+    message = messageUser(" from the Petrichor Team",message)
+    email_from = settings.EMAIL_HOST_USER
+    recipient_list = emails
+    send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=True, html_message=message)
+    return True
+
 def get_forget_token(email):
     return PetrichroSigner.sign(email)
 

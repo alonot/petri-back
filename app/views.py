@@ -558,27 +558,21 @@ def apply_event_paid(request: Request):
         # Total participants including the authenticated user
         total_participants = len(participants) + 1
 
-        # Check for individual event
-        if not event.isTeam:
-            if total_participants != 1:
-                return r500("Individual events require exactly 1 participant.")
-
-        # Check for team event
-        else:
-            if not (event.minMember <= total_participants <= event.maxMember):
-                return r500(f"Team events require between {event.minMember} and {event.maxMember} participants.")
+        
+        if not (event.minMember <= total_participants <= event.maxMember):
+            return r500(f"Number of participants must be - Min Paticipants: {event.minMember}, max Participants: {event.maxMember} ")
 
 
         # # Fees Calculation
         
         if event.isTeam:
-            total_fee = event.fee * total_participants   # authenticated user not included in participants 
+            total_fee = event.fee * total_participants  
         else:
             total_fee = event.fee
         
         ca_profile = None
         try:
-            if CAcode != "null":
+            if CAcode != "null" or CAcode != "":
                 ca_profile = CAProfile.objects.get(CACode = CAcode)
                 ca_profile.registration +=1
                 ca_profile.save()
@@ -652,15 +646,9 @@ def apply_event_free(request: Request):
         # Total participants including the authenticated user
         total_participants = len(participants) + 1
 
-        # Check for individual event
-        if not event.isTeam:
-            if total_participants != 1:
-                return r500("Individual events require exactly 1 participant.")
-
-        # Check for team event
-        else:
-            if not (event.minMember <= total_participants <= event.maxMember):
-                return r500(f"Team events require between {event.minMember} and {event.maxMember} participants.")
+        # Check for Participants
+        if not (event.minMember <= total_participants <= event.maxMember):
+            return r500(f"Number of participants must be - Min Paticipants: {event.minMember}, max Participants: {event.maxMember} ")
             
             
         # Create a new event record

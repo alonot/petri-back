@@ -8,7 +8,7 @@ from rest_framework.request import Request
 
 from rest_framework.decorators import api_view
 
-from utils import send_error_mail,r200, r500 , send_delete_transaction_mail
+from utils import send_error_mail,r200, r500 , send_delete_transaction_mail, send_event_verification_mail
 
 
 
@@ -54,6 +54,10 @@ def verifyTR(request):
             try:
                 transaction = TransactionTable.objects.get(transaction_id=transaction_id)
                 transaction.verified = True
+                # send mail to user
+                send_event_verification_mail(transaction.user_id.email + [TransactionTable.deserialize_emails(transaction.participants)],
+                                             transaction.transaction_id,transaction.event_id.name)
+                #
                 transaction.save()
             except TransactionTable.DoesNotExist:
                 failed_transactions.append(transaction_id)
@@ -194,7 +198,7 @@ def addEvent(request):
             maxMember = maxMember ,
             isTeam = isTeam)
         event.save()
-        print('done')
+        # print('done')
         return r200("Event saved successfully")
 
     except Exception as e:
@@ -217,7 +221,7 @@ def updateEvent(request: Request):
             dt_maxMember=data.get("maxMember")
             dt_isTeam=data.get("isTeam")
 
-            print("wd")
+            # print("wd")
             event = Event.objects.filter(event_id=dt_eventId).first()
             if event is None:
                 return r500(f'No event found with eventId {dt_eventId}')
