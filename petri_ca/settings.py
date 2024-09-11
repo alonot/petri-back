@@ -31,19 +31,27 @@ load_dotenv(os.path.join(BASE_DIR , "petri_ca",".env"))
 SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = (os.environ.get('DEBUG')) == "True"
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 
 CSRF_TRUSTED_ORIGINS = [
+<<<<<<< HEAD
     'http://localhost:5173', 'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://x.petrichor.events'
+=======
+    'http://localhost:5173','http://localhost:5174', 'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://x.petrichor.events'
+>>>>>>> main
 ]
 ALLOWED_HOSTS = [
     'localhost','127.0.0.1', 'https://petrichor.events', 'https://petrichor-events.vercel.app', ".vercel.app", 'x.petrichor.events'
 ]
 CORS_ORIGIN_WHITELIST = [
+<<<<<<< HEAD
     'http://localhost:5173', 'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://.petrichor.events'
+=======
+    'http://localhost:5173','http://localhost:5174', 'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://.petrichor.events'
+>>>>>>> main
 ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # or 'django.contrib.sessions.backends.cache'
@@ -119,6 +127,7 @@ WSGI_APPLICATION = 'petri_ca.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 if DEBUG:
+    print("Using Local Database")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -163,6 +172,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build' ,'static')
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

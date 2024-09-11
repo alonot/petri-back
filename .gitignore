@@ -4,3 +4,7 @@
 */__pycache__
 custom/__pycache__
 __pycache__
+*static*
+*htmlcov*
+*.c*
+*/db.sqlite3*

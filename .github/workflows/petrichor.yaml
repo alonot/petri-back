@@ -1,0 +1,36 @@
+name: Petrichor Tests
+
+on:
+  push:
+    branches:
+      - main
+  
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+        DEBUG: ${{ vars.DEBUG }}
+        FORGET_KEY: ${{ vars.FORGET_KEY }}
+        FORGET_SALT_KEY: ${{ vars.FORGET_SALT_KEY }}
+        SECRET_KEY: ${{ vars.SECRET_KEY }}
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.12
+    - name: Install dependencies
+      run: |
+        echo "Environment ${{ env.DEBUG }}"
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Petrichor Django Testing
+      run: |
+        python3 manage.py test app/tests
