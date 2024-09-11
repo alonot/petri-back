@@ -32,26 +32,23 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = (os.environ.get('DEBUG')) == "True"
+FRONTEND_LINK = "https://petrichor.events/"
+BACKEND_LINK = "https://petrichor-backend.vercel.app/"
+if DEBUG:
+    FRONTEND_LINK = "http://localhost:5173"
+    BACKEND_LINK = "https://petrichor-backend.vercel.app/"
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 
 CSRF_TRUSTED_ORIGINS = [
-<<<<<<< HEAD
-    'http://localhost:5173', 'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://x.petrichor.events'
-=======
     'http://localhost:5173','http://localhost:5174', 'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://x.petrichor.events'
->>>>>>> main
 ]
 ALLOWED_HOSTS = [
     'localhost','127.0.0.1', 'https://petrichor.events', 'https://petrichor-events.vercel.app', ".vercel.app", 'x.petrichor.events'
 ]
 CORS_ORIGIN_WHITELIST = [
-<<<<<<< HEAD
-    'http://localhost:5173', 'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://.petrichor.events'
-=======
     'http://localhost:5173','http://localhost:5174', 'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://.petrichor.events'
->>>>>>> main
 ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # or 'django.contrib.sessions.backends.cache'

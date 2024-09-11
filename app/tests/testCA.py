@@ -34,6 +34,7 @@ class CreateCAUserTestCase(TestCase):
             instituteID=self.inst,
             gradYear=2023,
             stream='Engineering',
+            verified = True
         )
         self.user = user
         response  = testClient.post('/api/login/',{

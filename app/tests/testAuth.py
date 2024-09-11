@@ -7,6 +7,8 @@ from django.test import Client
 from app.models import Institute, User,Profile,CAProfile,UserRegistrations
 from django.urls import reverse
 
+from utils import get_forget_token
+
 # to run use - py manage.py test app/tests/
 
 # coverage run manage.py test app/tests --keepdb
@@ -243,12 +245,18 @@ class RegisterTest(TestCase):
             Test on a correct data
         '''
         self.test_RegisterGoodData1()
+        token = get_forget_token("alo@fsg.com")
+        response  = testClient.get(f'/api/login/verify/{token}/',{
+            },content_type="application/json")
+        self.assertEqual(response.status_code, 302) # redirect
+        self.assertIn("success",response.url) # type: ignore
         try:
             response = testClient.post('/api/login/',{
                 "username":  "alo@fsg.com",
                 "password": "123w123qe",
             },content_type="application/json")
         except Exception as e:
+            print(e)
             self.fail("Error")
 
         user = User.objects.filter(username = "alo@fsg.com").first()
@@ -261,15 +269,38 @@ class RegisterTest(TestCase):
             Test on a wrong credentials
         '''
         self.test_RegisterGoodData1()
+        token = get_forget_token("alo@fsg.com")
+        response  = testClient.get(f'/api/login/verify/{token}/',{
+            },content_type="application/json")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("success",response.url) # type: ignore
         try:
             response = testClient.post('/api/login/',{
                 "username":  "alo@fsg.com",
                 "password": "12w123qe",
             },content_type="application/json")
         except Exception as e:
+            print(e)
             self.fail("Error")
 
         self.assertNotEqual(response.status_code, 200)
+
+    def test_NotVerified(self):
+        '''
+            Test on a wrong credentials
+        '''
+        self.test_RegisterGoodData1()
+        try:
+            response = testClient.post('/api/login/',{
+                "username":  "alo@fsg.com",
+                "password": "123w123qe", # correct credentials but not verified
+            },content_type="application/json")
+        except Exception as e:
+            print(e)
+            self.fail("Error")
+
+        self.assertNotEqual(response.status_code, 200)
+        self.assertIn("verif",response.json()["message"])
             
         
 
@@ -284,6 +315,7 @@ class RegisterTest(TestCase):
             },content_type="application/json")
             
         except Exception as e:
+            print(e)
             self.fail("Error")
 
         self.assertNotEqual(response.status_code, 200)
@@ -307,6 +339,13 @@ class AuthTest(TestCase):
                 "stream": "cse"
             })
 
+            # verifying the register
+            token = get_forget_token("alo@fsg.com")
+            response  = testClient.get(f'/api/login/verify/{token}/',{
+                },content_type="application/json")
+            self.assertEqual(response.status_code, 302)
+            self.assertIn("success",response.url) # type: ignore
+
             response = testClient.post('/api/login/',{
                     "username":  "alo@fsg.com",
                     "password": "123w123qe",
@@ -315,6 +354,7 @@ class AuthTest(TestCase):
             self.token = json.loads(response.content)['token']
 
         except Exception as e:
+            print(e)
             self.fail("Error")
         return super().setUp()
     
@@ -330,6 +370,7 @@ class AuthTest(TestCase):
             'Authorization': f"Bearer {self.token}"
         })
         except Exception as e:
+            print(e)
             self.fail("Error")
 
         self.assertEqual(response.status_code, 200)
@@ -349,6 +390,7 @@ class AuthTest(TestCase):
             'Authorization': f"Bearer {self.token}"
         })
         except Exception as e:
+            print(e)
             self.fail("Error")
 
         self.assertEqual(response.status_code, 200)
@@ -370,6 +412,7 @@ class AuthTest(TestCase):
             'Authorization': f"Bearer {self.token}"
         })
         except Exception as e:
+            print(e)
             self.fail("Error")
 
         self.assertEqual(response.status_code, 200)
@@ -390,6 +433,7 @@ class AuthTest(TestCase):
             'Authorization': f"Bearer {self.token}"
         })
         except Exception as e:
+            print(e)
             self.fail("Error")
 
         self.assertEqual(response.status_code, 200)
@@ -416,6 +460,7 @@ class AuthTest(TestCase):
             'Authorization': f"Bearer {self.token}"
         })
         except Exception as e:
+            print(e)
             self.fail("Error")
 
         self.assertEqual(response.status_code, 200)
@@ -439,6 +484,7 @@ class AuthTest(TestCase):
             'Authorization': f"Bearer not_loggedIn"
         })
         except Exception as e:
+            print(e)
             self.fail("Error")
 
         self.assertNotEqual(response.status_code, 200)
@@ -458,6 +504,7 @@ class AuthTest(TestCase):
         })
             
         except Exception as e:
+            print(e)
             self.fail("Error")
 
         self.assertNotEqual(response.status_code, 200)
@@ -472,6 +519,7 @@ class AuthTest(TestCase):
         })
             
         except Exception as e:
+            print(e)
             self.fail("Error")
 
         self.assertNotEqual(response.status_code, 200)

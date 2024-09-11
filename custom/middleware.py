@@ -4,6 +4,7 @@ import json
 from collections import OrderedDict
 from rest_framework_simplejwt.exceptions import TokenError
 from django.http import HttpRequest, HttpResponse
+from app.models import Profile
 
 from utils import AUTH_EXEMPT, PetrichorAuthenticator, Refreshserializer
 
@@ -46,8 +47,12 @@ class PetrichorAuthMiddleware(object):
         }
         if not exempt:
             token = None
+            user = None
             try:
                 user = PetrichorAuthenticator.authenticate(request)  # type: ignore
+                resp_data:dict = {
+                    "loggedIn":False
+                }
                 if user is not None:  # If we got some data here, then user is already authorized
                     resp_data['loggedIn'] = True
                     token = None
@@ -83,16 +88,23 @@ class PetrichorAuthMiddleware(object):
                 # if user is not logged then returning the response from here only. 
                 # The request does goes further to any middleware or the target view
                 return HttpResponse(json.dumps(resp_data),content_type='application/json',status=403)
-            resp_data['access'] = token # type: ignore
-            if not resp_data['loggedIn']:
+            resp_data['access'] = token 
+            if not resp_data['loggedIn'] or user is None:
                 resp_data.update({
                     "success":False,
                     "message":"Not Logged in",
                     "status":403
-                }) # type: ignore
+                })
                 # if user is not logged then returning the response from here only. 
                 # The request does goes further to any middleware or the target view
                 return HttpResponse(json.dumps(resp_data),content_type='application/json',status=403)
+
+            '''
+            No need to check for verified or not If user is able to login then he must have already been verified
+            Otherwise the login request would have failed and user would have not got the access token
+            But since user got one, so he is surely verified
+            
+            '''
             
 
         response:HttpResponse = self.get_response(request)

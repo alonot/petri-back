@@ -4,6 +4,7 @@ import time
 from django.conf import settings
 from django.forms import ValidationError
 from django.http import QueryDict
+from django.shortcuts import redirect
 from rest_framework.request import Empty, Request
 from django.contrib.auth.models import User
 from django.core.validators import validate_email
@@ -16,8 +17,9 @@ from django.core.mail import send_mail
 from django.contrib.auth.models import AnonymousUser
 from django.core.signing import SignatureExpired,BadSignature
 
+from petri_ca.settings import FRONTEND_LINK
 from utils import ResponseWithCode, get_email_from_token, get_forget_token, get_profile_data, get_profile_events,\
-r500,send_error_mail, method_not_allowed, send_event_registration_mail , send_forget_password_mail,error_response
+r500,send_error_mail, method_not_allowed, send_event_registration_mail , send_forget_password_mail,error_response, send_user_verification_mail
 from .models import EMAIL_SEPARATOR, Institute, Profile, TransactionTable,Event,CAProfile,UserRegistrations
 from django.db.utils import IntegrityError
 from django.utils.datastructures import MultiValueDictKeyError
@@ -171,7 +173,8 @@ def signup(request:Request):
                                     phone=phone,
                                     instituteID=institute,
                                     gradYear=gradyear,
-                                    stream=stream)
+                                    stream=stream,
+                                    verified = False)
                 
                 # saving the profile and user. If any of above steps fails the Profile will not be created
                 user_profile.save()
@@ -187,11 +190,16 @@ def signup(request:Request):
                         transactionIds =""
                     )
 
+                token = get_forget_token(email)# Generates Token, It lasts for 5 mins
+                send_user_verification_mail(email,token)
+
+
+
                 # print("User Created")
                 return ResponseWithCode({
                     "success":True,
                     "username":username
-                },"success")
+                },"We have sent an verification request to your email. Please verify the registration.")
             
             except IntegrityError as e:
                 if new_user:
@@ -346,6 +354,12 @@ class LoginTokenSerializer(TokenObtainPairSerializer):
                     "message":"User authenticated but its Profile Doesn't Exists.\
                     User has been deleted.Please create a new Profile."
                 }
+            if not user_profile.verified:
+                return {
+                    "status":400,
+                    "success":False,
+                    "message":"Please verify you account first. We would have sent you an verification email to the provided email address."
+                }
             
             return {
                 "status": 200,
@@ -392,6 +406,48 @@ class LoginUser(TokenObtainPairView):
 
     serializer_class = LoginTokenSerializer
     
+
+@api_view(['GET'])
+def verifyUser(request:Request , token:str):
+    '''
+        Verifies user
+    '''
+    
+    try:
+        
+        try:
+            email = get_email_from_token(token)
+        except SignatureExpired:
+            actual_email = token.split(':')[0]
+            new_token = get_forget_token(actual_email)
+            send_user_verification_mail(actual_email,new_token)
+            return redirect(f"{FRONTEND_LINK}message/Token expired. A new mail may have been sent to your email address.If not please contact the team.")
+        except BadSignature:
+            return redirect(f"{FRONTEND_LINK}message/You entered an Invalid token. Please check the link carefully.")
+        
+        user_obj = User.objects.filter(username = email).first()
+        if user_obj is None:
+            return redirect(f"{FRONTEND_LINK}message/No user exists with this email.Please try re-registering.")
+
+        
+        if (not hasattr(user_obj,'profile')):
+            send_error_mail(inspect.stack()[0][3],{"event":"verifyUser"}, f"User exists but no profile...{user_obj.email}")
+            if user_obj:
+                user_obj.delete()
+            return redirect(f"{FRONTEND_LINK}message/User authenticated but its Profile Doesn't Exists.\
+                    User has been deleted.Please create a new Profile.")
+
+        profile:Profile = user_obj.profile # type:ignore
+        profile.verified = True
+        profile.save()
+
+        return redirect(f"{FRONTEND_LINK}message/We have verified your account successfully.Now, you can login and explore Petrichor 25")
+
+    
+    except Exception as e:
+        send_error_mail(inspect.stack()[0][3],{"event":"verifyUser"}, e)
+        return redirect(f"{FRONTEND_LINK}message/We encountered some error in verifying your account. Reported this event to the team")
+
     
 @api_view(['POST'])
 def authenticated(request:Request):

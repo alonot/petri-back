@@ -72,8 +72,11 @@ def get_profile_data(user_profile:Profile):
     user_data['email'] = user_profile.user.get_username()
     user_data['phone'] = user_profile.phone
     user_data['stream'] = user_profile.stream
-    user_data['gradYear'] = user_profile.gradYear    
-    user_data['institute'] = user_profile.instituteID.instiName
+    user_data['gradYear'] = user_profile.gradYear 
+    if user_profile.instituteID:   
+      user_data['institute'] = user_profile.instituteID.instiName
+    else:
+      user_data['institute'] = "No insti"
     return user_data
     
 def get_profile_events(user:User):
@@ -82,13 +85,13 @@ def get_profile_events(user:User):
         NOTE- Any None handled error raised by this functions is/must be handled by the caller function.
     '''
     events = []
-    user_registration = user.userregistrations
+    user_registration = user.userregistrations # type:ignore
     # print(user_registration)
     trIds=TransactionTable.deserialize_emails(user_registration.transactionIds)
     # print(trIds)
     for trId in trIds:
         transaction = TransactionTable.objects.filter(transaction_id = trId).first()
-        if transaction is not None:
+        if transaction is not None and transaction.event_id:
             events.append({
                 "eventId": transaction.event_id.event_id,
                 "verified": transaction.verified
@@ -104,11 +107,7 @@ def method_not_allowed():
 
 def send_forget_password_mail(email , token, name):
     subject = 'Your forget password link'
-<<<<<<< HEAD
-    message = ForgetPasswordHtml(name, f"https://x.petrichor.events/changepassword/{token}/")
-=======
-    message = ForgetPasswordHtml(name, f"https://petrichor.events/changepassword/{token}/")
->>>>>>> main
+    message = ForgetPasswordHtml(name, f"{settings.FRONTEND_LINK}/changepassword/{token}/")
     email_from = settings.EMAIL_HOST_USER
     recipient_list = [email]
     send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=True, html_message=message)
@@ -125,7 +124,7 @@ def send_delete_transaction_mail(email , event_name):
 def send_event_registration_mail(emails,event,verified):
     subject = 'Petrichor Event: ' + event
     message = (f'''We have received your registration for the event :{event}. Please visit the website for venue and date. You can also contact us here 
-      <a href="https://petrichor.events/contactUs">Contact Us</a>
+      <a href="{settings.FRONTEND_LINK}/contactUs">Contact Us</a>
     ''')
     if not verified:
         message += '<strong>Please note your registration has not been verified by our team till now. We will will verify your payment and mail you a confirmation mail soon.</strong>'
@@ -139,12 +138,32 @@ def send_event_registration_mail(emails,event,verified):
 def send_event_verification_mail(emails, trIds,event):
     subject = 'Petrichor Event: ' + event
     message = (f'''We have <strong>verified</strong> your registration for the event :{event} with given transactionId: {trIds}. Please visit the website for venue and date. You can also contact us here 
-      <a href="https://petrichor.events/contactUs">Contact Us</a>
+      <a href="{settings.FRONTEND_LINK}/contactUs">Contact Us</a>
     ''')
     message +="<br> Thank you for participating in Petrichor'25."
     message = messageUser(" from the Petrichor Team",message)
     email_from = settings.EMAIL_HOST_USER
     recipient_list = emails
+    send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=True, html_message=message)
+    return True
+
+def send_user_verification_mail(email:str,token):
+    subject = 'Petrichor \'25 Registration' 
+    message = (f'''<div>
+                <p>We have received a registration request for this email at <a href="{settings.FRONTEND_LINK}">Petrichor25</a>\
+                  Please click here to verify your registration <br>
+               </p>
+               <center><a class="button-green button" style="color:white;" href="{settings.BACKEND_LINK}api/login/verify/{token}/">Verify</a></center>
+               <p>
+                  Ignore this message if you don't recognize this request.  
+                  You can also contact us here <a href="{settings.FRONTEND_LINK}/contactUs">Contact Us</a>
+               </p>
+               </div>
+    ''')
+    message +="<p><br> Thank you for participating in Petrichor'25.</p>"
+    message = messageUser(" from the Petrichor Team",message)
+    email_from = settings.EMAIL_HOST_USER
+    recipient_list = [email]
     send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=True, html_message=message)
     return True
 
@@ -596,7 +615,7 @@ def ForgetPasswordHtml(name,action_url):
           <table class="email-content" width="100%" cellpadding="0" cellspacing="0" role="presentation">
             <tr>
               <td class="email-masthead">
-                <a href="https://petrichor.events" class="f-fallback email-masthead_name">
+                <a href="{settings.FRONTEND_LINK}" class="f-fallback email-masthead_name">
                 Petrichor 25
               </a>
               </td>
@@ -653,7 +672,7 @@ def ForgetPasswordHtml(name,action_url):
 </html>
 '''
 
-def messageUser(name,message):
+def messageUser(name,message:str):
     return f'''
     <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
@@ -1093,7 +1112,7 @@ def messageUser(name,message):
           <table class="email-content" width="100%" cellpadding="0" cellspacing="0" role="presentation">
             <tr>
               <td class="email-masthead">
-                <a href="https://petrichor.events" class="f-fallback email-masthead_name">
+                <a href="{settings.FRONTEND_LINK}" class="f-fallback email-masthead_name">
                 Petrichor 25
               </a>
               </td>
@@ -1107,7 +1126,7 @@ def messageUser(name,message):
                     <td class="content-cell">
                       <div class="f-fallback">
                         <h1>Hi {name},</h1>
-                        <p>{message}                        
+                        {message}                        
                         <p>Thanks,
                           <br>The Petrichor 25 team</p>
                       </div>

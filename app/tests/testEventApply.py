@@ -33,11 +33,13 @@ class EventApplicationTests(TestCase):
         
         self.profile = Profile.objects.create(
             username='testuser',
-            user=self.user
+            user=self.user,
+            verified = True
         )
         self.profile_non_insti = Profile.objects.create(
             username='testuser2',
-            user=self.user_non_insti
+            user=self.user_non_insti,
+            verified = True
         )
         
         self.event_team = Event.objects.create(
@@ -133,7 +135,7 @@ class EventApplicationTests(TestCase):
             'CACode': self.CACode2
         }, format='json', HTTP_AUTHORIZATION=f"Bearer {self.token}")
         
-        print(response1.status_code, response1.json())
+        # print(response1.status_code, response1.json())
         self.assertEqual(response1.status_code, status.HTTP_200_OK)
 
         response2 = self.client.post(reverse('applyEventpaid'), {
@@ -174,7 +176,7 @@ class EventApplicationTests(TestCase):
             'CACode': self.CACode2
         }, format='json', HTTP_AUTHORIZATION=f"Bearer {self.token}")
         
-        print(response.status_code, response.json()) 
+        # print(response.status_code, response.json()) 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(TransactionTable.objects.count(), 1)
         transaction = TransactionTable.objects.first()

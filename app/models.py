@@ -22,6 +22,7 @@ class Profile(models.Model):
     gradYear = models.IntegerField(default=6969)
     stream = models.TextField(null=True)
     joined = models.DateTimeField(auto_now_add=True)
+    verified = models.BooleanField(default=False)
 
     def __str__(self):
         return self.username

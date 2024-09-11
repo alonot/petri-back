@@ -13,6 +13,56 @@ from rest_framework.decorators import api_view
 from utils import ResponseWithCode, r200, r500 , send_delete_transaction_mail, send_error_mail, send_event_verification_mail
 
 
+@api_view(['POST'])
+def getAllUsers(request):
+
+    data,valid = getUsersData()
+    if valid:
+        return ResponseWithCode({
+            "data":data,
+            "success":True
+        },"Data Fetched")
+    else :
+        return r500("Fetch failed")
+
+
+def getUsersData():
+    '''
+    Returns a list of users
+    '''
+    try:
+        users = User.objects.all()
+        allUsers = []
+        for user in users:
+            if not hasattr(user,'profile'):
+                continue
+            profile:Profile = user.profile # type:ignore
+            caprofile :CAProfile | None = None
+            if hasattr(user,'caprofile'):
+                caprofile = user.caprofile # type:ignore
+            institute = profile.instituteID
+            userData = {
+                "name":profile.username,
+                "phone":profile.phone,
+                "email":user.email,
+                "gradyear":profile.gradYear,
+                "steam":profile.stream,
+                "joined":profile.joined.strftime("%d/%m/%Y, %H:%M:%S"),
+                "college":"",
+                "CA":"",
+                "CAregistrations":"",
+            }
+            if institute:
+                userData["college"] = institute.instiName
+            if caprofile:
+                userData["CA"] = caprofile.CACode
+                userData["CAregistrations"] = caprofile.registration
+            allUsers.append(userData)
+
+        return allUsers,True
+    except Exception as e:
+        send_error_mail(inspect.stack()[0][3], {"data":"GETUSERS"}, e)
+        return [],False
 
 
 #This is Transaction IDS
@@ -56,7 +106,7 @@ def verifyTR(request):
             except Exception as e:
                 print(e)
                  # we are taking any exception here to store in failed list and then tell frontend about it
-                send_error_mail(inspect.stack()[0][3], "verify:" + transaction_ids.__str__(), e)
+                send_error_mail(inspect.stack()[0][3], {"event":"verify:" + transaction_ids.__str__()}, e)
                 failed_transactions.append(transaction_id)
                 
         
@@ -280,5 +330,5 @@ def getDataFromID() -> tuple[dict,bool]:
                
         return allEvents,True
     except Exception as e:
-        send_error_mail(inspect.stack()[0][3], "GETEVENTS", e)
+        send_error_mail(inspect.stack()[0][3], {"event":"GETEVENTS"}, e)
         return {},False

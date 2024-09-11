@@ -5,6 +5,7 @@ urlpatterns = [
     ##
     # path('login/',views.login_user,name="login"),
     path('login/',views.LoginUser.as_view(),name="login"),
+    path('login/verify/<token>/',views.verifyUser,name="loginVerify"),
     path('register/', views.signup, name="signup"),
     path('forget-password/',views.ForgetPassword , name='forgetpassword'),
     path('change-password/<token>/',views.ChangePassword , name="changepassword"),
