@@ -42,13 +42,13 @@ CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://x.petrichor.events',"https://finance-petrichor.netlify.app"
+    'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://x.petrichor.events',"https://finance-petrichor.netlify.app","https://petrichor-backend.vercel.app"
 ]
 ALLOWED_HOSTS = [
-    'https://petrichor.events', 'https://petrichor-events.vercel.app', 'x.petrichor.events',"https://finance-petrichor.netlify.app","finance-petrichor.netlify.app"
+    'https://petrichor.events', 'https://petrichor-events.vercel.app', 'x.petrichor.events',"petrichor-backend.vercel.app","https://finance-petrichor.netlify.app","finance-petrichor.netlify.app"
 ]
 CORS_ORIGIN_WHITELIST = [
-     'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://.petrichor.events',"https://finance-petrichor.netlify.app"
+     'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://.petrichor.events',"https://finance-petrichor.netlify.app","https://petrichor-backend.vercel.app"
 ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # or 'django.contrib.sessions.backends.cache'
