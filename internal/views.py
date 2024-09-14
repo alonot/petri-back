@@ -46,7 +46,7 @@ def getUsersData():
                 "phone":profile.phone,
                 "email":user.email,
                 "gradyear":profile.gradYear,
-                "steam":profile.stream,
+                "stream":profile.stream,
                 "joined":profile.joined.strftime("%d/%m/%Y, %H:%M:%S"),
                 "college":"",
                 "CA":"",
