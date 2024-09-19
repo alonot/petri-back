@@ -546,12 +546,16 @@ def get_event_data(request):
             send_error_mail(inspect.stack()[0][3], request.data, e)
             return r500("Something Bad Happened")
 
-def updateUserRegTable(tableObject:TransactionTable,participants:list[str],transactionId:str,event_id:str):
+def updateUserRegTable(tableObject:TransactionTable,participants:list[str],transactionId:str,event_id:str) -> tuple[str,list]:
     # this checks if the participant is already registered for the event or not
         AlreadyPresentIn = []
         #####
         AllUsers: list[UserRegistrations] = []
         for participant in participants:
+            try:
+                validate_email(participant)
+            except ValidationError:
+                return "Following Email is invalid", [participant]
             user_registration = UserRegistrations.objects.filter(email = participant).first()
             if user_registration is not None:
                 trIds = TransactionTable.deserialize_emails(user_registration.transactionIds)
@@ -572,14 +576,14 @@ def updateUserRegTable(tableObject:TransactionTable,participants:list[str],trans
 
         # Check this above .save() to cancel any save operation
         if len(AlreadyPresentIn) != 0:
-            return AlreadyPresentIn
+            return "Some/All Participants have already been registered for this event",AlreadyPresentIn
 
 
         tableObject.save()
         for reg in AllUsers:
             reg.save()
 
-        return []
+        return "",[]
 
 
 @api_view(['POST'])
@@ -618,7 +622,7 @@ def apply_event_paid(request: Request):
         verified=False
         if all(map(lambda x: x.endswith("smail.iitpkd.ac.in"), participants + [user.email])): 
             verified=True
-            transactionId=f"IIT Palakkad Student+{time.time()}"
+            transactionId=f"IIT Palakkad Student+{time.time()}{event_id}{user.id}"
 
         # Check for duplicate transaction ID
         if TransactionTable.objects.filter(transaction_id=transactionId).exists():
@@ -670,15 +674,13 @@ def apply_event_paid(request: Request):
             total_fee = total_fee
         )
 
-        
-
         # Check this above .save() to cancel any save operation
-        regUsers =  updateUserRegTable(eventpaidTableObject,participants + [user.email], transactionId,event_id)
+        message,regUsers =  updateUserRegTable(eventpaidTableObject,participants + [user.email], transactionId,event_id)
         if len(regUsers) != 0:
             return ResponseWithCode({
                 "success":False,
                 "registered_users": regUsers
-            },"Some/All Participants have already been registered for this event",500)
+            },message,500)
 
         send_event_registration_mail(participants + [user.email],event.name,verified)
 
@@ -714,7 +716,7 @@ def apply_event_free(request: Request):
     user = request.user
     
     try:
-        transaction_id = f"{user.id}free{time.time()}"
+        transaction_id = f"{user.id}{event_id}free{time.time()}"
 
         try:
             event = Event.objects.get(event_id = event_id)
@@ -741,12 +743,12 @@ def apply_event_free(request: Request):
         )
 
         # Check this above .save() to cancel any save operation
-        regUsers =  updateUserRegTable(eventfreeTableObject,participants + [user.email], transaction_id,event_id)
+        message,regUsers =  updateUserRegTable(eventfreeTableObject,participants + [user.email], transaction_id,event_id)
         if len(regUsers) != 0:
             return ResponseWithCode({
                 "success":False,
                 "registered_users": regUsers
-            },"Some/All Participants have already been registered for this event",500)
+            },message,500)
 
         send_event_registration_mail(participants + [user.email],event.name,True)
 

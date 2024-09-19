@@ -94,7 +94,10 @@ class TransactionTable(models.Model):
         """
         Deserializes a single string of emails separated by EMAIL_SEPARATOR into a list of emails.
         """
-        return emails_str.split(EMAIL_SEPARATOR)
+        parts = emails_str.split(EMAIL_SEPARATOR)
+        if parts.__contains__(''):
+            parts.remove('')
+        return parts
 
 
 
