@@ -229,6 +229,7 @@ def allEvents(request: Request):
         data=request.data
         if isinstance(data, (dict, QueryDict)):
             password = data.get("password" , None)
+            print(password)
             if password is None:
                 return ResponseWithCode({}, "password is missing", 502)
             
