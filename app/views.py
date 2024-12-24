@@ -511,41 +511,6 @@ def authenticated(request:Request):
         return r500("some error occured. Reported to our developers")
 
 
-
-# @login_required # limits the calls to this function ig
-@api_view(['POST'])
-def get_event_data(request):
-
-    if request.method != 'POST':
-        return method_not_allowed()
-
-    try:
-        data=request.data
-
-        if data is None:
-            return r500("invalid form")
-        
-        if data.__contains__('id'):
-            event_id = data["id"]
-        else:
-            return r500("Send an eventID")
-        
-        try:
-            event = Event.objects.get(eventId = event_id)
-        except Event.DoesNotExist:
-            return r500(f"Invalid Event ID = {event_id}")
-        
-        return ResponseWithCode({
-            "success":True,
-            "name": event.name,
-            "fee": event.fee,
-            "minMemeber": event.minMember,
-            "maxMemeber": event.maxMember
-        },"Data fetched")
-    except Exception as e:
-            send_error_mail(inspect.stack()[0][3], request.data, e)
-            return r500("Something Bad Happened")
-
 def updateUserRegTable(tableObject:TransactionTable,participants:list[str],transactionId:str,event_id:str) -> tuple[str,list]:
     # this checks if the participant is already registered for the event or not
         AlreadyPresentIn = []

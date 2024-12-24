@@ -10,7 +10,8 @@ from rest_framework.request import Request
 
 from rest_framework.decorators import api_view
 
-from utils import ResponseWithCode, r200, r500 , send_delete_transaction_mail, send_error_mail, send_event_verification_mail
+from petri_ca.settings import PASSWORD
+from utils import ResponseWithCode, method_not_allowed, r200, r500 , send_delete_transaction_mail, send_error_mail, send_event_verification_mail
 
 
 @api_view(['POST'])
@@ -177,7 +178,7 @@ def addEvent(request:Request):
         data=request.data
         if data == None or not isinstance(data,(dict,QueryDict)):
             return r500("Please send some info about the event")
-        eventId = data.get("event_id" , None)
+        eventId = data.get("eventId" , None)
         if eventId is None:
             return r500("Event Id is missing")
         name = data.get("name" , None)
@@ -195,13 +196,24 @@ def addEvent(request:Request):
         isTeam = data.get("isTeam" , None)
         if isTeam is None:
             return r500("isTeam is missing")
+        markdown = data.get("markdown" , None)
+        if markdown is None:
+            return r500("markdown is missing")
+        password = data.get("password" , None)
+        if password is None:
+            return r500("password is missing") 
+        
+        if (password != PASSWORD):
+            return r500("Incorrect password. Event was not added")
+        
         event = Event.objects.create(
             event_id = eventId ,
             name =  name ,
             fee = fee ,
             minMember = minMember ,
             maxMember = maxMember ,
-            isTeam = isTeam)
+            isTeam = isTeam,
+            markdown = markdown)
         event.save()
         # print('done')
         return r200("Event saved successfully")
@@ -211,12 +223,88 @@ def addEvent(request:Request):
         return r500(f'Error: {e}')
 
 
+@api_view(['POST'])
+def allEvents(request: Request):
+    try:
+        data=request.data
+        if isinstance(data, (dict, QueryDict)):
+            password = data.get("password" , None)
+            if password is None:
+                return r500("password is missing")
+            
+
+            if (password != PASSWORD):
+                return r500("Incorrect password. Event was not updated")
+            
+            # print("wd")
+            events = Event.objects.all()
+            print(events)
+            res = []
+            for event in events:
+                res.append({
+                    "name":event.name,
+                    "eventId":event.event_id
+                })
+
+            return ResponseWithCode({
+                "data" : res
+            }, "events fetchted")
+        else:
+            return r500("Empty Data recieved")
+    except Exception as e:
+        print(e)
+        # send_error_mail(inspect.stack()[0][3], request.data, e)
+        return r500(f'Error: {e}')
+
+
+@api_view(['POST'])
+def get_event_data(request):
+
+    if request.method != 'POST':
+        return method_not_allowed()
+
+    try:
+        data=request.data
+
+        if data is None:
+            return r500("invalid form")
+        
+        if data.__contains__('id'):
+            event_id = data["id"]
+        else:
+            return r500("Send an eventID")
+        
+        password = data.get("password" , None)
+        if password is None:
+            return r500("password is missing") 
+
+        if (password != PASSWORD):
+            return r500("Incorrect password. Event was not updated")
+        try:
+            event = Event.objects.get(event_id = event_id)
+        except Event.DoesNotExist:
+            return r500(f"Invalid Event ID = {event_id}")
+        return ResponseWithCode({
+            "success":True,
+            "eventId": event_id,
+            "name": event.name,
+            "fee": event.fee,
+            "minMember": event.minMember,
+            "maxMember": event.maxMember,
+            "isTeam": event.isTeam,
+            "markdown": event.markdown,
+        },"Data fetched")
+    except Exception as e:
+            send_error_mail(inspect.stack()[0][3], request.data, e)
+            return r500("Something Bad Happened")
+
+
 @api_view(["POST"])
 def updateEvent(request: Request):
     try:
         data=request.data
         if isinstance(data, (dict, QueryDict)):
-            dt_eventId = data.get("event_id")
+            dt_eventId = data.get("eventId")
             if dt_eventId is None:
                 return r500('Please provide an eventId')
             dt_name=data.get("name")
@@ -224,7 +312,14 @@ def updateEvent(request: Request):
             dt_minMember=data.get("minMember")
             dt_maxMember=data.get("maxMember")
             dt_isTeam=data.get("isTeam")
+            dt_markdown=data.get("markdown")
+            password = data.get("password" , None)
+            if password is None:
+                return r500("password is missing") 
 
+            if (password != PASSWORD):
+                return r500("Incorrect password. Event was not updated")
+            
             # print("wd")
             event = Event.objects.filter(event_id=dt_eventId).first()
             if event is None:
@@ -241,11 +336,14 @@ def updateEvent(request: Request):
                 event.maxMember=int(dt_maxMember)
             if dt_isTeam is not None:
                 event.isTeam=bool(dt_isTeam)
+            if dt_markdown is not None:
+                event.markdown=(dt_markdown)
 
             event.save()
 
             return r200("Event Updated")
-
+        else:
+            return r500("Empty Data recieved")
     except Exception as e:
         print(e)
         # send_error_mail(inspect.stack()[0][3], request.data, e)
