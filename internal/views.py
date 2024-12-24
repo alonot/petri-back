@@ -230,15 +230,13 @@ def allEvents(request: Request):
         if isinstance(data, (dict, QueryDict)):
             password = data.get("password" , None)
             if password is None:
-                return r500("password is missing")
+                return ResponseWithCode({}, "password is missing", 502)
             
-            print(password, PASSWORD)
             if (password != PASSWORD):
-                return r500("Incorrect password. Event was not updated")
+                return ResponseWithCode({}, "Wrong Password", 501)
             
             # print("wd")
             events = Event.objects.all()
-            print(events)
             res = []
             for event in events:
                 res.append({
@@ -253,7 +251,7 @@ def allEvents(request: Request):
             return r500("Empty Data recieved")
     except Exception as e:
         print(e)
-        # send_error_mail(inspect.stack()[0][3], request.data, e)
+        send_error_mail(inspect.stack()[0][3], request.data, e)
         return r500(f'Error: {e}')
 
 
@@ -346,7 +344,7 @@ def updateEvent(request: Request):
             return r500("Empty Data recieved")
     except Exception as e:
         print(e)
-        # send_error_mail(inspect.stack()[0][3], request.data, e)
+        send_error_mail(inspect.    stack()[0][3], request.data, e)
         return r500(f'Error: {e}')
 
 @api_view(['POST'])
