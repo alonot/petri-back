@@ -232,7 +232,7 @@ def allEvents(request: Request):
             if password is None:
                 return r500("password is missing")
             
-
+            print(password, PASSWORD)
             if (password != PASSWORD):
                 return r500("Incorrect password. Event was not updated")
             
