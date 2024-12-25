@@ -68,6 +68,7 @@ class Event(models.Model):
     maxMember = models.IntegerField(default=1)
     isTeam = models.BooleanField(default = False)
     markdown= models.TextField(default="")
+    organizers= models.TextField(default="")
     
 EMAIL_SEPARATOR = '\n'
 

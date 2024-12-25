@@ -199,6 +199,9 @@ def addEvent(request:Request):
         markdown = data.get("markdown" , None)
         if markdown is None:
             return r500("markdown is missing")
+        organizers: list[str] | None = data.get("organizers" , None)
+        if organizers is None:
+            return r500("organizers is missing")
         password = data.get("password" , None)
         if password is None:
             return r500("password is missing") 
@@ -223,14 +226,15 @@ def addEvent(request:Request):
             minMember = minMember ,
             maxMember = maxMember ,
             isTeam = isTeam,
-            markdown = markdown)
+            markdown = markdown,
+            organizers = TransactionTable.serialise_emails(organizers))
         event.save()
         # print('done')
         return r200("Event saved successfully")
 
     except Exception as e:
         print(e)
-        return r500(f'Error: {e}')
+        return r500(f'Error: {e}')  
 
 
 @api_view(['POST'])
@@ -302,6 +306,7 @@ def get_event_data(request):
             "maxMember": event.maxMember,
             "isTeam": event.isTeam,
             "markdown": event.markdown,
+            "organizers": TransactionTable.deserialize_emails(event.organizers)
         },"Data fetched")
     except Exception as e:
             send_error_mail(inspect.stack()[0][3], request.data, e)
@@ -366,6 +371,7 @@ def updateEvent(request: Request):
             dt_maxMember=data.get("maxMember")
             dt_isTeam=data.get("isTeam")
             dt_markdown=data.get("markdown")
+            dt_organizers: list[str]=data.get("organizers")
             password = data.get("password" , None)
             if password is None:
                 return r500("password is missing") 
@@ -402,7 +408,9 @@ def updateEvent(request: Request):
                 event.isTeam=bool(dt_isTeam)
             if dt_markdown is not None:
                 event.markdown=(dt_markdown)
-
+            if dt_organizers is not None:
+                event.organizers= TransactionTable.serialise_emails(dt_organizers)
+            # print(dt_organizers)
             event.save()
 
             return r200("Event Updated")
