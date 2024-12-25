@@ -1,4 +1,5 @@
 
+import base64
 from collections import defaultdict
 from functools import lru_cache
 import inspect
@@ -10,6 +11,7 @@ from rest_framework.request import Request
 
 from rest_framework.decorators import api_view
 
+from internal.models import Image
 from petri_ca.settings import PASSWORD
 from utils import ResponseWithCode, method_not_allowed, r200, r500 , send_delete_transaction_mail, send_error_mail, send_event_verification_mail
 
@@ -199,8 +201,8 @@ def addEvent(request:Request):
         markdown = data.get("markdown" , None)
         if markdown is None:
             return r500("markdown is missing")
-        organizers: list[str] | None = data.get("organizers" , None)
-        if organizers is None:
+        dt_organizers: list[str] | None = data.get("organizers" , None)
+        if dt_organizers is None:
             return r500("organizers is missing")
         password = data.get("password" , None)
         if password is None:
@@ -226,8 +228,13 @@ def addEvent(request:Request):
             minMember = minMember ,
             maxMember = maxMember ,
             isTeam = isTeam,
-            markdown = markdown,
-            organizers = TransactionTable.serialise_emails(organizers))
+            markdown = markdown)
+        
+        organisers = [o[0] for o in dt_organizers]
+        update_organizers(dt_organizers)
+
+
+        event.organizers= TransactionTable.serialise_emails(organisers)
         event.save()
         # print('done')
         return r200("Event saved successfully")
@@ -236,38 +243,6 @@ def addEvent(request:Request):
         print(e)
         return r500(f'Error: {e}')  
 
-
-@api_view(['POST'])
-def allEvents(request: Request):
-    try:
-        data=request.data
-        if isinstance(data, (dict, QueryDict)):
-            password = data.get("password" , None)
-            # print(password)
-            if password is None:
-                return ResponseWithCode({}, "password is missing", 502)
-            
-            if (password != PASSWORD):
-                return ResponseWithCode({}, "Wrong Password", 501)
-            
-            # print("wd")
-            events = Event.objects.all()
-            res = []
-            for event in events:
-                res.append({
-                    "name":event.name,
-                    "eventId":event.event_id
-                })
-
-            return ResponseWithCode({
-                "data" : res
-            }, "events fetchted")
-        else:
-            return r500("Empty Data recieved")
-    except Exception as e:
-        print(e)
-        send_error_mail(inspect.stack()[0][3], request.data, e)
-        return r500(f'Error: {e}')
 
 
 @api_view(['POST'])
@@ -307,6 +282,44 @@ def get_event_data(request):
             "isTeam": event.isTeam,
             "markdown": event.markdown,
             "organizers": TransactionTable.deserialize_emails(event.organizers)
+        },"Data fetched")
+    except Exception as e:
+            send_error_mail(inspect.stack()[0][3], request.data, e)
+            return r500("Something Bad Happened")
+
+@api_view(['POST'])
+def get_image_data(request):
+
+    if request.method != 'POST':
+        return method_not_allowed()
+
+    try:
+        data=request.data
+
+        if data is None:
+            return r500("invalid form")
+        
+        if data.__contains__('name'):
+            image_name = data["name"]
+        else:
+            return r500("Send a name")
+        
+        password = data.get("password" , None)
+        if password is None:
+            return r500("password is missing") 
+
+        if (password != PASSWORD):
+            return r500("Incorrect password. Event was not updated")
+        try:
+            image = Image.objects.get(name = image_name)
+        except Image.DoesNotExist:
+            return r500(f"Invalid image name = {image_name}")
+        
+        base64_data = base64.b64encode(image.image).decode('utf-8')
+        return ResponseWithCode({
+            "success":True,
+            "image": base64_data,
+            "name": image.name,
         },"Data fetched")
     except Exception as e:
             send_error_mail(inspect.stack()[0][3], request.data, e)
@@ -357,6 +370,105 @@ def get_next_id(request):
             return r500("Something Bad Happened")
 
 
+@api_view(['POST'])
+def allEvents(request: Request):
+    try:
+        data=request.data
+        if isinstance(data, (dict, QueryDict)):
+            password = data.get("password" , None)
+            # print(password)
+            if password is None:
+                return ResponseWithCode({}, "password is missing", 502)
+            
+            if (password != PASSWORD):
+                return ResponseWithCode({}, "Wrong Password", 501)
+            
+            # print("wd")
+            events = Event.objects.all()
+            res = []
+            for event in events:
+                res.append({
+                    "name":event.name,
+                    "eventId":event.event_id
+                })
+
+            return ResponseWithCode({
+                "data" : res
+            }, "events fetchted")
+        else:
+            return r500("Empty Data recieved")
+    except Exception as e:
+        print(e)
+        send_error_mail(inspect.stack()[0][3], request.data, e)
+        return r500(f'Error: {e}')
+
+@api_view(['POST'])
+def allImages(request: Request):
+    try:
+        data=request.data
+        if isinstance(data, (dict, QueryDict)):
+            password = data.get("password" , None)
+            # print(password)
+            if password is None:
+                return ResponseWithCode({}, "password is missing", 502)
+            
+            if (password != PASSWORD):
+                return ResponseWithCode({}, "Wrong Password", 501)
+            
+            # print("wd")
+            events = Image.objects.all()
+            res = []
+            for event in events:
+                base64_data = base64.b64encode(event.image).decode('utf-8')
+                res.append({
+                    "name":event.name,
+                    "image":base64_data
+                })
+            return ResponseWithCode({
+                "data" : res
+            }, "events fetchted")
+        else:
+            return r500("Empty Data recieved")
+    except Exception as e:
+        print(e)
+        send_error_mail(inspect.stack()[0][3], request.data, e)
+        return r500(f'Error: {e}')
+
+def update_organizers(dt_organizers):
+    # print(dt_organizers)
+    for name, buffer_data in dt_organizers:
+        old_name = buffer_data['old_name']
+        buffer : str | dict = buffer_data['buffer']
+        buffer_binary = None
+        if (buffer != ""):
+            buffer_binary = bytes(buffer['data'])
+
+        if old_name != "" :
+            old_image = Image.objects.filter(name=old_name).first()
+            if old_image is None: 
+                if buffer == "":
+                    return r500(f"{old_name}'s image does not exists with us. Please reupload with overwrite 'On' .")
+                old_image = Image(name = name, image =buffer_binary)
+                
+            if old_name.lower() != name.lower():
+                prev_image = Image.objects.filter(name=old_name).first()
+                prev_image.delete()
+
+                old_image.name = name
+                
+            if buffer != "":
+                old_image.image =buffer_binary
+                
+            old_image.save()
+        else:
+            new_image = Image.objects.filter(name = name).first()
+            if (new_image is None):
+                new_image = Image(name = name, image =buffer_binary)
+            else:
+                new_image.image =buffer_binary
+
+            new_image.save()
+
 @api_view(["POST"])
 def updateEvent(request: Request):
     try:
@@ -371,7 +483,7 @@ def updateEvent(request: Request):
             dt_maxMember=data.get("maxMember")
             dt_isTeam=data.get("isTeam")
             dt_markdown=data.get("markdown")
-            dt_organizers: list[str]=data.get("organizers")
+            dt_organizers =data.get("organizers")
             password = data.get("password" , None)
             if password is None:
                 return r500("password is missing") 
@@ -409,7 +521,10 @@ def updateEvent(request: Request):
             if dt_markdown is not None:
                 event.markdown=(dt_markdown)
             if dt_organizers is not None:
-                event.organizers= TransactionTable.serialise_emails(dt_organizers)
+                organisers = [o[0] for o in dt_organizers]
+                update_organizers(dt_organizers)
+
+                event.organizers= TransactionTable.serialise_emails(organisers)
             # print(dt_organizers)
             event.save()
 
