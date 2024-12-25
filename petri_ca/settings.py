@@ -42,26 +42,29 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 
-CSRF_TRUSTED_ORIGINS = [
-    'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://x.petrichor.events',"https://finance-petrichor.vercel.app", "https://finance-petrichor.netlify.app","https://petrichor-backend.vercel.app",
-]
-ALLOWED_HOSTS = [
-    'https://petrichor.events', 'https://petrichor-events.vercel.app', 'x.petrichor.events',"petrichor-backend.vercel.app", "petri-back.vercel.app","https://finance-petrichor.vercel.app","finance-petrichor.vercel.app", "https://finance-petrichor.netlify.app", "finance-petrichor.netlify.app"
-]
-CORS_ORIGIN_WHITELIST = [
-     'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://.petrichor.events',"https://finance-petrichor.vercel.app", "https://finance-petrichor.netlify.app","https://petrichor-backend.vercel.app", 
-]
+if not DEBUG:
+    CSRF_TRUSTED_ORIGINS = [
+        'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://x.petrichor.events',"https://finance-petrichor.vercel.app","https://petrichor-backend.vercel.app",
+    ]
+    ALLOWED_HOSTS = [
+        'https://petrichor.events', 'https://petrichor-events.vercel.app', 'x.petrichor.events',"petrichor-backend.vercel.app", "petri-back.vercel.app","https://finance-petrichor.vercel.app","finance-petrichor.vercel.app"
+    ]
+    CORS_ORIGIN_WHITELIST = [
+        'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://.petrichor.events',"https://finance-petrichor.vercel.app","https://petrichor-backend.vercel.app", 
+    ]
+
+else:
 
 
-# CSRF_TRUSTED_ORIGINS = [
-#     'http://localhost:5173', 'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://x.petrichor.events'
-# ]
-# ALLOWED_HOSTS = [
-#     'localhost','127.0.0.1', 'https://petrichor.events', 'https://petrichor-events.vercel.app', ".vercel.app", 'x.petrichor.events'
-# ]
-# CORS_ORIGIN_WHITELIST = [
-#     'http://localhost:5173', 'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://.petrichor.events'
-# ]
+    CSRF_TRUSTED_ORIGINS = [
+        'http://localhost:5173', 'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://x.petrichor.events'
+    ]
+    ALLOWED_HOSTS = [
+        'localhost','127.0.0.1', 'https://petrichor.events', 'https://petrichor-events.vercel.app', ".vercel.app", 'x.petrichor.events'
+    ]
+    CORS_ORIGIN_WHITELIST = [
+        'http://localhost:5173', 'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://.petrichor.events'
+    ]
 
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # or 'django.contrib.sessions.backends.cache'

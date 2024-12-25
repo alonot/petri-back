@@ -229,7 +229,7 @@ def allEvents(request: Request):
         data=request.data
         if isinstance(data, (dict, QueryDict)):
             password = data.get("password" , None)
-            print(password)
+            # print(password)
             if password is None:
                 return ResponseWithCode({}, "password is missing", 502)
             
@@ -292,6 +292,50 @@ def get_event_data(request):
             "maxMember": event.maxMember,
             "isTeam": event.isTeam,
             "markdown": event.markdown,
+        },"Data fetched")
+    except Exception as e:
+            send_error_mail(inspect.stack()[0][3], request.data, e)
+            return r500("Something Bad Happened")
+
+@api_view(['POST'])
+def get_next_id(request):
+
+    if request.method != 'POST':
+        return method_not_allowed()
+
+    try:
+        data=request.data
+
+        if data is None:
+            return r500("invalid form")
+        
+        if data.__contains__('type'):
+            event_type = data["type"]
+        else:
+            return r500("Send a type")
+        
+        password = data.get("password" , None)
+        if password is None:
+            return r500("password is missing") 
+
+        if (password != PASSWORD):
+            return r500("Incorrect password. Event was not updated")
+        
+        if not event_type in ["Workshop", "Informal", "Technical", "Cultural"]:
+            return r500(f"Invalid Event type : {event_type}")
+        
+        number = 0
+        events = Event.objects.filter(event_id__startswith=event_type[0]).values('event_id')
+
+        if events.exists():
+            event_ids = [int(event['event_id'][2:]) for event in events]
+            number = sorted(event_ids)[-1]
+        number +=1
+        
+        
+        return ResponseWithCode({
+            "success":True,
+            "data": number
         },"Data fetched")
     except Exception as e:
             send_error_mail(inspect.stack()[0][3], request.data, e)
