@@ -206,6 +206,12 @@ def addEvent(request:Request):
         if (password != PASSWORD):
             return r500("Incorrect password. Event was not added")
         
+        dt_fee = int(fee)
+        if dt_fee == 0:
+            eventId = f'{eventId[0]}F{eventId[2:]}'
+        else:
+            eventId = f'{eventId[0]}P{eventId[2:]}'
+        
         event = Event.objects.create(
             event_id = eventId ,
             name =  name ,
@@ -373,6 +379,14 @@ def updateEvent(request: Request):
                 event.name=dt_name
             if dt_fee is not None:
                 event.fee=int(dt_fee)
+                if event.fee == 0 and event.event_id[1] == 'P':
+                    prev_event = Event.objects.get(event_id = event.event_id)
+                    prev_event.delete()
+                    event.event_id = f'{event.event_id[0]}F{event.event_id[2:]}'
+                elif event.fee != 0 and event.event_id[1] == 'F':
+                    prev_event = Event.objects.get(event_id = event.event_id)
+                    prev_event.delete()
+                    event.event_id = f'{event.event_id[0]}P{event.event_id[2:]}'
             if dt_minMember is not None:
                 event.minMember=int(dt_minMember)
             if dt_maxMember is not None:
