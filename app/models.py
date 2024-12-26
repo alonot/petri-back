@@ -69,6 +69,7 @@ class Event(models.Model):
     isTeam = models.BooleanField(default = False)
     markdown= models.TextField(default="")
     organizers= models.TextField(default="")
+    image_url = models.TextField(default="https://picsum.photos/1000/1000")
     
 EMAIL_SEPARATOR = '\n'
 

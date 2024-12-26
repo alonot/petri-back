@@ -201,6 +201,9 @@ def addEvent(request:Request):
         markdown = data.get("markdown" , None)
         if markdown is None:
             return r500("markdown is missing")
+        image_url = data.get("image_url" , None)
+        if image_url is None:
+            return r500("image_url is missing")
         dt_organizers: list[str] | None = data.get("organizers" , None)
         if dt_organizers is None:
             return r500("organizers is missing")
@@ -228,7 +231,8 @@ def addEvent(request:Request):
             minMember = minMember ,
             maxMember = maxMember ,
             isTeam = isTeam,
-            markdown = markdown)
+            markdown = markdown,
+            image_url = image_url)
         
         organisers = [o[0] for o in dt_organizers]
         update_organizers(dt_organizers)
@@ -389,7 +393,8 @@ def allEvents(request: Request):
             for event in events:
                 res.append({
                     "name":event.name,
-                    "eventId":event.event_id
+                    "eventId":event.event_id,
+                    "image_url": event.image_url
                 })
 
             return ResponseWithCode({
@@ -483,6 +488,7 @@ def updateEvent(request: Request):
             dt_maxMember=data.get("maxMember")
             dt_isTeam=data.get("isTeam")
             dt_markdown=data.get("markdown")
+            dt_image_url=data.get("image_url")
             dt_organizers =data.get("organizers")
             password = data.get("password" , None)
             if password is None:
@@ -520,6 +526,8 @@ def updateEvent(request: Request):
                 event.isTeam=bool(dt_isTeam)
             if dt_markdown is not None:
                 event.markdown=(dt_markdown)
+            if dt_image_url is not None:
+                event.image_url=(dt_image_url)
             if dt_organizers is not None:
                 organisers = [o[0] for o in dt_organizers]
                 update_organizers(dt_organizers)
