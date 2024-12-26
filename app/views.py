@@ -598,6 +598,8 @@ def apply_event_paid(request: Request):
         except Event.DoesNotExist:
             return r500("No event exists with given event_id")
         
+        if event.fee == 0:
+            return r500("This event is free. Please use api/event/free/")
                 
         # Total participants including the authenticated user
         total_participants = len(participants) + 1
@@ -688,6 +690,9 @@ def apply_event_free(request: Request):
         except Event.DoesNotExist:
             return r500("No event exists with given event_id")
         
+        if event.fee != 0:
+            return r500("This event has some fee assigned with it. Please use api/event/paid/")
+
         
         
         # Total participants including the authenticated user
