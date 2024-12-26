@@ -18,7 +18,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.signing import SignatureExpired,BadSignature
 
 from petri_ca.settings import FRONTEND_LINK
-from utils import ResponseWithCode, get_email_from_token, get_forget_token, get_profile_data, get_profile_events,\
+from utils import ResponseWithCode, get_email_from_token, get_forget_token, get_profile_data, get_profile_events, has_duplicate,\
 r500,send_error_mail, method_not_allowed, send_event_registration_mail , send_forget_password_mail,error_response, send_user_verification_mail
 from .models import EMAIL_SEPARATOR, Institute, Profile, TransactionTable,Event,CAProfile,UserRegistrations
 from django.db.utils import IntegrityError
@@ -595,6 +595,9 @@ def apply_event_paid(request: Request):
         if isinstance(user,AnonymousUser):
             return r500("Some error occured")
         
+        if has_duplicate(participants + [user.email]):
+            return r500("Duplicate emails provided in participants")
+        
         
         # Check if participants' emails are from IIT Palakkad
         verified=False
@@ -687,6 +690,7 @@ def apply_event_free(request: Request):
         elif part is None or not isinstance(part,list):
             return r500("null participants , key is participants")
         participants :list[str] = part
+
         
         valid = True
         invalid = ""
@@ -710,6 +714,9 @@ def apply_event_free(request: Request):
     user = request.user
     
     try:
+        if has_duplicate(participants + [user.email]):
+            return r500("Duplicate emails provided in participants")
+        
         transaction_id = f"{user.id}{event_id}free{time.time()}"
 
         try:

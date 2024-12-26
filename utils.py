@@ -37,6 +37,13 @@ def ResponseWithCode(data:dict,message:str,status=200)-> Response:
     })
     return Response(data,status)
 
+def has_duplicate(strings): 
+  seen = set()
+  for string in strings:
+      if string in seen:
+          return True
+      seen.add(string)
+  return False
 
 def r500(msg: str) -> Response:
     return Response({
