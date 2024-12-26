@@ -573,6 +573,19 @@ def apply_event_paid(request: Request):
                 return r500("null participants , key is participants")
             participants :list[str] = part
 
+            valid = True
+            invalid = ""
+            for email in participants:
+                try:
+                    validate_email(email)
+                except ValidationError:
+                    valid = False
+                    invalid = email
+                    break
+            
+            if not valid:
+                return r500(f"Participants' emails must be valid. Invalid email: {invalid}")
+
         except KeyError as e:
             send_error_mail(inspect.stack()[0][3], request.data, e) 
             return error_response("Missing required fields: participants, eventId, and transactionId")
@@ -674,6 +687,20 @@ def apply_event_free(request: Request):
         elif part is None or not isinstance(part,list):
             return r500("null participants , key is participants")
         participants :list[str] = part
+        
+        valid = True
+        invalid = ""
+        for email in participants:
+            try:
+                validate_email(email)
+            except ValidationError:
+                valid = False
+                invalid = email
+                break
+        
+        if not valid:
+            return r500(f"Participants' emails must be valid. Invalid email: {invalid}")
+        
         event_id = event_id.strip()
 
     except KeyError as e:
