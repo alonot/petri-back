@@ -690,7 +690,12 @@ def apply_event_free(request: Request):
         except Event.DoesNotExist:
             return r500("No event exists with given event_id")
         
-        if event.fee != 0 and not user.email.endswith("iitpkd.ac.in"):
+        # Check if participants' emails are from IIT Palakkad
+        verified=False
+        if all(map(lambda x: x.endswith("iitpkd.ac.in"), participants + [user.email])): 
+            verified=True
+
+        if event.fee != 0 and not verified:
             return r500("This event has some fee assigned with it. Please use api/event/paid/")
 
         
