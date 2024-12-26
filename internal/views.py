@@ -215,7 +215,7 @@ def addEvent(request:Request):
             return r500("Incorrect password. Event was not added")
         
         
-        if (name == "tutorial"):
+        if (name.lower() in ["tutorial", "tutorial_event"]):
             return r500(f'Cannot Edit Tutorial')
 
         dt_fee = int(fee)
@@ -497,7 +497,7 @@ def updateEvent(request: Request):
             if (password != PASSWORD):
                 return r500("Incorrect password. Event was not updated")
             
-            if (dt_eventId == "TF01"):
+            if (dt_eventId in ["TF01", "WF01"]):
                 return r500(f'Cannot Edit Tutorial')
             
             # print("wd")
