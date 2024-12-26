@@ -285,6 +285,7 @@ def get_event_data(request):
             "maxMember": event.maxMember,
             "isTeam": event.isTeam,
             "markdown": event.markdown,
+            "image_url": event.image_url,
             "organizers": TransactionTable.deserialize_emails(event.organizers)
         },"Data fetched")
     except Exception as e:
@@ -393,8 +394,7 @@ def allEvents(request: Request):
             for event in events:
                 res.append({
                     "name":event.name,
-                    "eventId":event.event_id,
-                    "image_url": event.image_url
+                    "eventId":event.event_id
                 })
 
             return ResponseWithCode({
