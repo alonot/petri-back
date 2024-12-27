@@ -312,12 +312,12 @@ def get_image_data(request):
         else:
             return r500("Send a name")
         
-        password = data.get("password" , None)
-        if password is None:
-            return r500("password is missing") 
+        # password = data.get("password" , None)
+        # if password is None:
+        #     return r500("password is missing") 
 
-        if (password != PASSWORD):
-            return r500("Incorrect password. Event was not updated")
+        # if (password != PASSWORD):
+        #     return r500("Incorrect password. Event was not updated")
         try:
             image = Image.objects.get(name = image_name)
         except Image.DoesNotExist:
