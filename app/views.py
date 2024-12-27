@@ -512,6 +512,10 @@ def authenticated(request:Request):
 
 
 def updateUserRegTable(tableObject:TransactionTable,participants:list[str],transactionId:str,event_id:str) -> tuple[str,list]:
+        '''
+        performs email validation
+        checks if event have already regsitered by any of the participants
+        '''
     # this checks if the participant is already registered for the event or not
         AlreadyPresentIn = []
         #####
@@ -572,19 +576,6 @@ def apply_event_paid(request: Request):
             elif part is None or not isinstance(part,list):
                 return r500("null participants , key is participants")
             participants :list[str] = part
-
-            valid = True
-            invalid = ""
-            for email in participants:
-                try:
-                    validate_email(email)
-                except ValidationError:
-                    valid = False
-                    invalid = email
-                    break
-            
-            if not valid:
-                return r500(f"Participants' emails must be valid. Invalid email: {invalid}")
 
         except KeyError as e:
             send_error_mail(inspect.stack()[0][3], request.data, e) 
@@ -691,20 +682,6 @@ def apply_event_free(request: Request):
             return r500("null participants , key is participants")
         participants :list[str] = part
 
-        
-        valid = True
-        invalid = ""
-        for email in participants:
-            try:
-                validate_email(email)
-            except ValidationError:
-                valid = False
-                invalid = email
-                break
-        
-        if not valid:
-            return r500(f"Participants' emails must be valid. Invalid email: {invalid}")
-        
         event_id = event_id.strip()
 
     except KeyError as e:

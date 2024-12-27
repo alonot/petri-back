@@ -217,6 +217,9 @@ def addEvent(request:Request):
         
         if (name.lower() in ["tutorial", "tutorial_event"]):
             return r500(f'Cannot Edit Tutorial')
+        
+        if (minMember > maxMember):
+            return r500("minMember cannot exceed maxMember")
 
         dt_fee = int(fee)
         if dt_fee == 0:
@@ -520,8 +523,12 @@ def updateEvent(request: Request):
                     event.event_id = f'{event.event_id[0]}P{event.event_id[2:]}'
             if dt_minMember is not None:
                 event.minMember=int(dt_minMember)
+                if (event.minMember > event.maxMember):
+                    return r500(f"provided minMembers:{dt_minMember} cannot exceed maxMembers: {event.maxMember}")
             if dt_maxMember is not None:
                 event.maxMember=int(dt_maxMember)
+                if (event.minMember > event.maxMember):
+                    return r500(f"provided maxMembers:{dt_maxMember} cannot be less than minMembers: {event.minMember}")
             if dt_isTeam is not None:
                 event.isTeam=bool(dt_isTeam)
             if dt_markdown is not None:
