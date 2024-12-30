@@ -50,6 +50,14 @@ class EventApplicationTests(TestCase):
             maxMember=10,
             isTeam=True
         )
+        self.event_team_free = Event.objects.create(
+            event_id='EVT005',
+            name='Team Event',
+            fee=0,
+            minMember=1,
+            maxMember=10,
+            isTeam=True
+        )
         self.event_team_2 = Event.objects.create(
             event_id='EVT004',
             name='Team Event',
@@ -87,7 +95,7 @@ class EventApplicationTests(TestCase):
         self.CACode2 = CAProfile.objects.all()[1].CACode 
 
 
-    def test_apply_event_team(self):
+    def test_apply_event_paid_team(self):
         response = self.client.post(reverse('applyEventpaid'), {
             'participants': ['testuser1@smail.iitpkd.ac.in', 'testuser2@smail.iitpkd.ac.in'],
             'eventId': self.event_team.event_id,
@@ -102,10 +110,20 @@ class EventApplicationTests(TestCase):
         self.assertTrue(transaction.verified)
         self.assertEqual(transaction.event_id, self.event_team)
         self.assertEqual(len(transaction.get_participants()),2)
+
+    def test_apply_event_paid_null_eventId(self):
+        response = self.client.post(reverse('applyEventpaid'), {
+            'participants': ['testuser1@smail.iitpkd.ac.in', 'testuser2@smail.iitpkd.ac.in'],
+            'transactionID': 'TXN002',
+            'CACode': self.CACode2
+        }, format='json',HTTP_AUTHORIZATION=f"Bearer {self.token}")
+
+        assert response.status_code == 500
+        assert response.json()["message"] == "null event Id , key is eventId"
         
         
 
-    def test_apply_event_individual(self):
+    def test_apply_event_paid_individual(self):
         response = self.client.post(reverse('applyEventpaid'), {
             'participants': [],
             'eventId': self.event_individual.event_id,
@@ -152,7 +170,7 @@ class EventApplicationTests(TestCase):
         self.assertEqual(len(transaction.get_participants()),1)
     
     
-    def test_non_iit_palakkad_email(self):
+    def test_apply_event_paid_non_iit_palakkad_email(self):
         response = self.client.post(reverse('applyEventpaid'), {
             'participants': ['noniituser@example.com'],
             'eventId': self.event_team.event_id,
@@ -171,7 +189,7 @@ class EventApplicationTests(TestCase):
         self.assertFalse(transaction.verified) # type:ignore
         self.assertEqual(len(transaction.get_participants()),1)
 
-    def test_wrong_email_format_in_participants(self):
+    def test_apply_event_paid_wrong_email_format_in_participants(self):
         response = self.client.post(reverse('applyEventpaid'), {
             'participants': ['noniituserexample.com',''],
             'eventId': self.event_team.event_id,
@@ -184,7 +202,7 @@ class EventApplicationTests(TestCase):
         self.assertIn("Following Email is invalid",response.json()["message"])
         self.assertEqual(TransactionTable.objects.count(), 0)
 
-    def test_non_existent_CAProfile(self):
+    def test_apply_event_paid_non_existent_CAProfile(self):
         response = self.client.post(reverse('applyEventpaid'), {
             'participants': ['testuser1@smail.iitpkd.ac.in'],
             'eventId': self.event_team.event_id,
@@ -195,7 +213,7 @@ class EventApplicationTests(TestCase):
         self.assertEqual(response.status_code, 439)
         self.assertIn('CA user not found', response.json()['message'])
 
-    def test_successful_application_with_CAProfile(self):
+    def test_apply_event_paid_successful_application_with_CAProfile(self):
         response = self.client.post(reverse('applyEventpaid'), {
             'participants': ['testuser1@smail.iitpkd.ac.in'],
             'eventId': self.event_team.event_id,
@@ -212,7 +230,7 @@ class EventApplicationTests(TestCase):
     
     
     
-    def test_participant_exceeds_capacity(self):
+    def test_apply_event_paid_participant_exceeds_capacity(self):
         response = self.client.post(reverse('applyEventpaid'), {
             'participants': ['testuser1@smail.iitpkd.ac.in', 'testuser2@smail.iitpkd.ac.in', 'testuser3@smail.iitpkd.ac.in'],
             'eventId': self.event_team_2.event_id,
@@ -226,7 +244,7 @@ class EventApplicationTests(TestCase):
     
     
 
-    def test_individual_event_with_multiple_participants(self):
+    def test_apply_event_paid_individual_event_with_multiple_participants(self):
         response = self.client.post(reverse('applyEventpaid'), {
             'participants': ['testuser1@smail.iitpkd.ac.in', 'testuser2@smail.iitpkd.ac.in'],
             'eventId': self.event_individual.event_id,
@@ -252,6 +270,7 @@ class EventApplicationTests(TestCase):
         
         # Check if the first registration was successful and the transaction is verified
         self.assertEqual(response1.status_code, 200)
+        self.assertIn('Event applied successfully', response1.json().get('message'))
         self.assertEqual(TransactionTable.objects.count(), 1)
         transaction1 = TransactionTable.objects.first()
         self.assertEqual(len(transaction1.get_participants()),1)
@@ -272,6 +291,88 @@ class EventApplicationTests(TestCase):
         self.assertIn('Some/All Participants have already been registered for this event', response2.json().get('message'))
 
     
+    def test_apply_event_paid_duplicate_emails(self):
+        response2 = self.client.post(reverse('applyEventpaid'), json.dumps({
+            'participants': ['csk20020@smail.iitpkd.ac.in'],  # This is the logged-in user's email
+            'eventId': self.event_team.event_id,
+            'transactionID': 'TXN009',
+            'CACode': self.CACode
+        }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
+        
+        self.assertEqual(response2.status_code, 500) ## server must reject due to duplicate mails
+        self.assertIn('Duplicate emails provided in participants', response2.json().get('message'))
+    
+    def test_apply_event_paid_null_tr(self):
+        response2 = self.client.post(reverse('applyEventpaid'), json.dumps({
+            'participants': [],  # This is the logged-in user's email
+            'eventId': self.event_team_2.event_id
+        }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
+        
+        self.assertEqual(response2.status_code, 500) ## server must reject due to duplicate mails
+        self.assertIn('null transaction Id , key is transactionID', response2.json().get('message'))
+    
+    def test_apply_event_paid_null_CACode(self):
+        response2 = self.client.post(reverse('applyEventpaid'), json.dumps({
+            'transactionID': 'TXN009',
+            'participants': [],  # This is the logged-in user's email
+            'eventId': self.event_team_2.event_id
+        }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
+        
+        self.assertEqual(response2.status_code, 500) ## server must reject due to duplicate mails
+        self.assertIn('null CAcode , key is CACode', response2.json().get('message'))
+    
+    def test_apply_event_paid_wrong_event_id(self):
+        response2 = self.client.post(reverse('applyEventpaid'), json.dumps({
+            'transactionID': 'TXN009',
+            "CACode": "",
+            'participants': [],  # This is the logged-in user's email
+            'eventId': "self.event_team_2.event_id"
+        }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
+        
+        self.assertEqual(response2.status_code, 500) ## server must reject due to duplicate mails
+        self.assertIn('No event exists with given event_id', response2.json().get('message'))
+    
+    def test_apply_event_paid_applying_free_event(self):
+        response2 = self.client.post(reverse('applyEventpaid'), json.dumps({
+            'transactionID': 'TXN009',
+            "CACode": "",
+            'participants': [],  # This is the logged-in user's email
+            'eventId': self.event_team_free.event_id
+        }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
+        
+        self.assertEqual(response2.status_code, 500) ## server must reject due to duplicate mails
+        self.assertIn('This event is free. Please use api/event/free/', response2.json().get('message'))
+    
+    def test_apply_event_paid_using_own_cacode(self):
+        response2 = self.client.post(reverse('applyEventpaid'), json.dumps({
+            'transactionID': 'TXN009',
+            "CACode": self.CACode,
+            'participants': ["csk20020@gmail.com"],  # This is the logged-in user's email
+            'eventId': self.event_team.event_id
+        }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
+        
+        self.assertEqual(response2.status_code, 500) ## server must reject due to duplicate mails
+        self.assertIn('You cannot use your own CA code', response2.json().get('message'))
+    
+    def test_apply_event_paid_null_n_str_participants(self):
+        response2 = self.client.post(reverse('applyEventpaid'), json.dumps({
+            'transactionID': 'TXN009',
+            'participants': "",  # This is the logged-in user's email,
+            "CACode": "",
+            'eventId': self.event_team_2.event_id
+        }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
+        
+        self.assertEqual(response2.status_code, 500) ## server must reject due to duplicate mails
+        self.assertIn('null participants , key is participants', response2.json().get('message'))
+        
+        response2 = self.client.post(reverse('applyEventpaid'), json.dumps({
+            'transactionID': 'TXN009',
+            "CACode": "null",
+            'eventId': self.event_team_2.event_id
+        }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
+        
+        self.assertEqual(response2.status_code, 500) ## server must reject due to duplicate mails
+        self.assertIn('null participants , key is participants', response2.json().get('message'))
     
     
     
@@ -282,7 +383,7 @@ class EventApplicationTests(TestCase):
     def test_apply_event_team_free(self):
         response = self.client.post(reverse('applyEventfree'), json.dumps({
             'participants': ['testuser1@example.com', 'testuser2@example.com'],
-            'eventId': self.event_team.event_id
+            'eventId': self.event_team_free.event_id
         }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
         
         # print(response.status_code, response.json())
@@ -376,7 +477,7 @@ class EventApplicationTests(TestCase):
         
         # print(response2.status_code, response2.json())
         self.assertEqual(response2.status_code, 500)
-        self.assertIn('Some/All Participants have already been registered for this event', response2.json().get('message'))
+        self.assertIn('Duplicate emails provided in participants', response2.json().get('message'))
 
 
     def test_free_event_with_multiple_participants(self):
@@ -388,6 +489,35 @@ class EventApplicationTests(TestCase):
         # print(response.status_code, response.json())
         self.assertEqual(response.status_code, 500)
         self.assertIn('Min ', response.json().get('message'))
+
+    
+    def test_apply_paid_event_in_free_event_non_insti_user(self):
+        response2 = self.client.post(reverse('applyEventfree'), json.dumps({
+            'participants': ["csk20020@gmail.com"], 
+            'eventId': self.event_team_2.event_id
+        }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
+        
+        self.assertEqual(response2.status_code, 500) ## server must reject due to duplicate mails
+        self.assertIn('This event has some fee assigned with it. Please use api/event/paid/', response2.json().get('message'))
+    
+    def test_apply_paid_event_in_free_event_insti_user(self):
+        ## this must be registered. 
+        
+        response2 = self.client.post(reverse('applyEventfree'), json.dumps({
+            'participants': ["csk200200@smail.iitpkd.ac.in"], 
+            'eventId': self.event_team_free.event_id
+        }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
+        
+        self.assertEqual(response2.status_code, 200) ## server must reject due to duplicate mails
+        self.assertIn('Event applied successfully', response2.json().get('message'))
+    
+    def test_apply_event_free_no_event_id(self):
+        response2 = self.client.post(reverse('applyEventfree'), json.dumps({
+            'participants': [self.user.email],  # This is the logged-in user's email
+        }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
+        
+        self.assertEqual(response2.status_code, 500) ## server must reject due to duplicate mails
+        self.assertIn('null event Id , key is eventId', response2.json().get('message'))
 
     def test_apply_event_free_multiple_event(self):
     # First registration attempt
@@ -405,28 +535,30 @@ class EventApplicationTests(TestCase):
         # Second registration attempt with the logged-in user's email as a participant
         response2 = self.client.post(reverse('applyEventfree'), json.dumps({
             'participants': [self.user.email],  # This is the logged-in user's email
-            'eventId': self.event_team_2.event_id
+            'eventId': self.event_team_free.event_id
         }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
         
-        self.assertEqual(response2.status_code, 200)
-        self.assertEqual(TransactionTable.objects.count(), 2)
-        
+        self.assertEqual(response2.status_code, 500) ## server must reject due to duplicate mails
+        # print(TransactionTable.objects.count())
         # Register registration attempt with the logged-in user's email as a participant
-        _ = self.client.post(reverse('applyEventfree'), json.dumps({
+        res = self.client.post(reverse('applyEventfree'), json.dumps({
             'participants': [],  # This is the logged-in user's email
-            'eventId': self.event_team_2.event_id
-        }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token_non_insti}")
-
+            'eventId': self.event_team_free.event_id
+        }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
+        
+        # print(res.json())
+        self.assertEqual(res.status_code,200)
+        self.assertEqual(TransactionTable.objects.count(), 2)
         # this must be rejected, same user on same event
-        resp = self.client.post(reverse('applyEventpaid'), json.dumps({
+        resp = self.client.post(reverse('applyEventfree'), json.dumps({
             'participants': ['csk20020@smail.iitpkd.ac.in'],  # This is the logged-in user's email
-            'eventId': self.event_team_2.event_id,
+            'eventId': self.event_team_free.event_id,
             'transactionID': 'TXN009',
             'CACode': "null"
         }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token_non_insti}")
         
         self.assertEqual(resp.status_code,500)
-        self.assertEqual(TransactionTable.objects.count(), 3)
-        event = Event.objects.filter(event_id = self.event_team_2.event_id).first()
+        self.assertEqual(TransactionTable.objects.count(), 2)
+        event = Event.objects.filter(event_id = self.event_team_free.event_id).first()
         transactionSet = event.transactiontable_set # type:ignore   
-        self.assertEqual(transactionSet.count(),2)
+        self.assertEqual(transactionSet.count(),1)
