@@ -413,34 +413,43 @@ def allEvents(request: Request):
 @api_view(['POST'])
 def allImages(request: Request):
     try:
-        data=request.data
-        if isinstance(data, (dict, QueryDict)):
-            password = data.get("password" , None)
-            # print(password)
-            if password is None:
-                return ResponseWithCode({}, "password is missing", 502)
-            
-            if (password != PASSWORD):
-                return ResponseWithCode({}, "Wrong Password", 501)
-            
-            # print("wd")
-            events = Image.objects.all()
-            res = []
-            for event in events:
+        data = request.data
+        if not data or not isinstance(data, (dict, QueryDict)):
+            return r500("Invalid or empty data received")
+        
+        password = data.get("password")
+        if not password:
+            return ResponseWithCode({}, "Password is missing", 502)
+        
+        if password != PASSWORD:  # Replace with secure comparison
+            return ResponseWithCode({}, "Wrong Password", 501)
+        
+        events = Image.objects.all()
+        if not events:
+            return ResponseWithCode({}, "No events found", 204)
+        
+        res = []
+        for event in events:
+            if not event.image:
+                continue
+            try:
                 base64_data = base64.b64encode(event.image).decode('utf-8')
-                res.append({
-                    "name":event.name,
-                    "image":base64_data
-                })
-            return ResponseWithCode({
-                "data" : res
-            }, "events fetchted")
-        else:
-            return r500("Empty Data recieved")
+            except Exception as encode_error:
+                print(f"Encoding error for event {event.name}: {encode_error}")
+                send_error_mail(inspect.stack()[0][3], request.data, encode_error)
+                continue
+            res.append({
+                "name": event.name,
+                "image": base64_data
+            })
+        
+        return ResponseWithCode({
+            "data": res
+        }, "Events fetched successfully")
     except Exception as e:
-        print(e)
-        send_error_mail(inspect.stack()[0][3], request.data, e)
-        return r500(f'Error: {e}')
+        print(f"Unexpected error: {e}")
+        res = send_error_mail(inspect.stack()[0][3], request.data, e)
+        return r500(f"Mail: {res} . Error: {e}")
 
 def update_organizers(dt_organizers):
     # print(dt_organizers)

@@ -64,10 +64,14 @@ def send_error_mail(name, data, e):
     '''
     if "password" in data.keys():
         data["password"]=""
-    send_mail(f'Website Error in: {name}',
-                message= f'Exception: {e}\nData: {json.dumps(data)}',
-                recipient_list=['112201024@smail.iitpkd.ac.in','112201020@smail.iitpkd.ac.in'],
-                from_email=settings.EMAIL_HOST_USER)
+    try:
+      send_mail(f'Website Error in: {name}',
+                  message= f'Exception: {e}\nData: {json.dumps(data)}',
+                  recipient_list=['112201024@smail.iitpkd.ac.in','112201020@smail.iitpkd.ac.in'],
+                  from_email=settings.EMAIL_HOST_USER)
+      return ""
+    except Exception as e:
+        return f"unable to send email {e}"
 
 def get_profile_data(user_profile:Profile):
     '''
