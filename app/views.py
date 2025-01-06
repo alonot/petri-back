@@ -545,7 +545,7 @@ def updateUserRegTable(tableObject:TransactionTable,participants:list[str],trans
 
         # Check this above .save() to cancel any save operation
         if len(AlreadyPresentIn) != 0:
-            return "Some/All Participants have already been registered for this event",AlreadyPresentIn
+            return f"Some/All Participants have already been registered for this event. Those emails are: {AlreadyPresentIn}",AlreadyPresentIn
 
 
         tableObject.save()
@@ -618,9 +618,10 @@ def apply_event_paid(request: Request):
 
         # # Fees Calculation
         
-        if event.isTeam:
+        if not event.isTeam:
             total_fee = event.fee * total_participants  
         else:
+            # the fees is treated as team fee
             total_fee = event.fee
         
         ca_profile = None

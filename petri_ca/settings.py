@@ -42,7 +42,7 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 
-if not DEBUG:
+if  DEBUG:
     CSRF_TRUSTED_ORIGINS = [
         'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://x.petrichor.events',"https://finance-petrichor.vercel.app","https://petrichor-backend.vercel.app",
     ]
