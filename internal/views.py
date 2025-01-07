@@ -209,6 +209,10 @@ def addEvent(request:Request):
         dt_organizers: list[str] | None = data.get("organizers" , None)
         if dt_organizers is None:
             return r500("organizers is missing")
+        dt_tags: list[str] | None = data.get("tags" , None)
+        if dt_tags is None:
+            return r500("organizers is missing")
+        
         password = data.get("password" , None)
         if password is None:
             return r500("password is missing") 
@@ -237,6 +241,7 @@ def addEvent(request:Request):
             maxMember = maxMember ,
             isTeam = isTeam,
             markdown = markdown,
+            tags = TransactionTable.serialise_emails(dt_tags),
             image_url = image_url)
         
         organisers = [o[0] for o in dt_organizers]
@@ -291,7 +296,8 @@ def get_event_data(request):
             "isTeam": event.isTeam,
             "markdown": event.markdown,
             "image_url": event.image_url,
-            "organizers": TransactionTable.deserialize_emails(event.organizers)
+            "organizers": TransactionTable.deserialize_emails(event.organizers),
+            "tags": TransactionTable.deserialize_emails(event.tags),
         },"Data fetched")
     except Exception as e:
             send_error_mail(inspect.stack()[0][3], request.data, e)
@@ -392,7 +398,6 @@ def allEvents(request: Request):
             # print(password)
             if password is None:
                 return ResponseWithCode({}, "password is missing", 502)
-            
             if (password != PASSWORD):
                 return ResponseWithCode({}, "Wrong Password", 501)
             
@@ -402,7 +407,8 @@ def allEvents(request: Request):
             for event in events:
                 res.append({
                     "name":event.name,
-                    "eventId":event.event_id
+                    "eventId":event.event_id,
+                    "tags": TransactionTable.deserialize_emails(event.tags)
                 })
 
             return ResponseWithCode({
@@ -541,6 +547,7 @@ def updateEvent(request: Request):
             dt_markdown=data.get("markdown")
             dt_image_url=data.get("image_url")
             dt_organizers =data.get("organizers")
+            dt_tags =data.get("tags")
             password = data.get("password" , None)
             if password is None:
                 return r500("password is missing") 
@@ -588,6 +595,8 @@ def updateEvent(request: Request):
                 update_organizers(dt_organizers)
 
                 event.organizers= TransactionTable.serialise_emails(organisers)
+            if dt_tags is not None:
+                event.tags = (TransactionTable.serialise_emails(dt_tags))
             # print(dt_organizers)
             event.save()
 

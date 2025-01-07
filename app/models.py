@@ -70,6 +70,7 @@ class Event(models.Model):
     markdown= models.TextField(default="")
     organizers= models.TextField(default="")
     image_url = models.TextField(default="https://picsum.photos/1000/1000")
+    tags = models.TextField(default="")
     
 EMAIL_SEPARATOR = '\n'
 
