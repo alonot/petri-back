@@ -297,7 +297,7 @@ def get_event_data(request):
             "markdown": event.markdown,
             "image_url": event.image_url,
             "organizers": TransactionTable.deserialize_emails(event.organizers),
-            "tags": TransactionTable.deserialize_emails(event.tags),
+            "tags": event.tags.split(EMAIL_SEPARATOR),
         },"Data fetched")
     except Exception as e:
             send_error_mail(inspect.stack()[0][3], request.data, e)
@@ -408,7 +408,7 @@ def allEvents(request: Request):
                 res.append({
                     "name":event.name,
                     "eventId":event.event_id,
-                    "tags": TransactionTable.deserialize_emails(event.tags)
+                    "tags": event.tags.split(EMAIL_SEPARATOR)
                 })
 
             return ResponseWithCode({
