@@ -1,15 +1,13 @@
-import json
 import re
 import time
 from django.conf import settings
 from django.forms import ValidationError
 from django.http import QueryDict
 from django.shortcuts import redirect
-from rest_framework.request import Empty, Request
+from rest_framework.request import Request
 from django.contrib.auth.models import User
 from django.core.validators import validate_email
 from rest_framework.decorators  import api_view
-from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework.exceptions import AuthenticationFailed
 
 from rest_framework.response import Response 
@@ -529,7 +527,7 @@ def updateUserRegTable(tableObject:TransactionTable,participants:list[str],trans
             if user_registration is not None:
                 trIds = TransactionTable.deserialize_emails(user_registration.transactionIds)
                 for trId in trIds:
-                    tr = TransactionTable.objects.filter(transaction_id= trId).first()
+                    tr = TransactionTable.objects.filter(transaction_id= trId).only("event_id").first()
                     if tr is not None and  tr.event_id and tr.event_id.event_id == event_id:
                         AlreadyPresentIn.append(participant)
                         break

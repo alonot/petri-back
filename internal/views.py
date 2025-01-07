@@ -3,6 +3,8 @@ import base64
 from collections import defaultdict
 from functools import lru_cache
 import inspect
+import io
+from PIL import Image as Img
 import json
 from django.http import HttpRequest, JsonResponse, QueryDict
 from app.models import *
@@ -251,7 +253,7 @@ def addEvent(request:Request):
         return r500(f'Error: {e}')  
 
 
-
+@lru_cache
 @api_view(['POST'])
 def get_event_data(request):
 
@@ -318,11 +320,14 @@ def get_image_data(request):
 
         # if (password != PASSWORD):
         #     return r500("Incorrect password. Event was not updated")
-        try:
-            image = Image.objects.get(name = image_name)
-        except Image.DoesNotExist:
+        # try:
+        image = Image.objects.filter(name = image_name).first()
+        if image is None:
             return r500(f"Invalid image name = {image_name}")
+
+        # except Image.DoesNotExist:
         
+        # base64_data = base64.b64encode(output_image.getvalue()).decode('utf-8')
         base64_data = base64.b64encode(image.image).decode('utf-8')
         return ResponseWithCode({
             "success":True,
@@ -392,7 +397,7 @@ def allEvents(request: Request):
                 return ResponseWithCode({}, "Wrong Password", 501)
             
             # print("wd")
-            events = Event.objects.all()
+            events = Event.objects.only("name","event_id")
             res = []
             for event in events:
                 res.append({
@@ -429,19 +434,49 @@ def allImages(request: Request):
             return ResponseWithCode({}, "No events found", 204)
         
         res = []
-        for event in events:
-            if not event.image:
+        for image in events:
+            if not image.image:
                 continue
             try:
-                base64_data = base64.b64encode(event.image).decode('utf-8')
+                base64_data = base64.b64encode(image.image).decode('utf-8')
             except Exception as encode_error:
-                print(f"Encoding error for event {event.name}: {encode_error}")
+                print(f"Encoding error for event {image.name}: {encode_error}")
                 send_error_mail(inspect.stack()[0][3], request.data, encode_error)
                 continue
             res.append({
-                "name": event.name,
+                "name": image.name,
                 "image": base64_data
             })
+        
+        return ResponseWithCode({
+            "data": res
+        }, "Events fetched successfully")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        res = send_error_mail(inspect.stack()[0][3], request.data, e)
+        return r500(f"Mail: {res} . Error: {e}")
+
+@api_view(['POST'])
+def allImagesInfo(request: Request):
+    try:
+        data = request.data
+        if not data or not isinstance(data, (dict, QueryDict)):
+            return r500("Invalid or empty data received")
+        
+        password = data.get("password")
+        if not password:
+            return ResponseWithCode({}, "Password is missing", 502)
+        
+        if password != PASSWORD:  # Replace with secure comparison
+            return ResponseWithCode({}, "Wrong Password", 501)
+        
+        images = Image.objects.only("name")
+        if not images:
+            return ResponseWithCode({}, "No images found", 204)
+        
+        res = []
+        for image in images:
+            res.append(image.name)
         
         return ResponseWithCode({
             "data": res
@@ -459,6 +494,10 @@ def update_organizers(dt_organizers):
         buffer_binary = None
         if (buffer != ""):
             buffer_binary = bytes(buffer['data'])
+            image_pil = Img.open(io.BytesIO(buffer_binary))
+            output_image = io.BytesIO()
+            image_pil.save(output_image, format='WEBP')
+            buffer_binary = output_image.getvalue()
 
         if old_name != "" :
             old_image = Image.objects.filter(name=old_name).first()

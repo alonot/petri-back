@@ -2,7 +2,7 @@
 import json
 from django.core.mail import send_mail
 from django.conf import settings
-from django.core.signing import TimestampSigner,SignatureExpired,BadSignature
+from django.core.signing import TimestampSigner
 
 from django.contrib.auth.models import User
 from app.models import Event, Institute, Profile,TransactionTable
@@ -101,7 +101,7 @@ def get_profile_events(user:User):
     trIds=TransactionTable.deserialize_emails(user_registration.transactionIds)
     # print(trIds)
     for trId in trIds:
-        transaction = TransactionTable.objects.filter(transaction_id = trId).first()
+        transaction = TransactionTable.objects.filter(transaction_id = trId).only("event_id", "verified").first()
         if transaction is not None and transaction.event_id:
             events.append({
                 "eventId": transaction.event_id.event_id,
