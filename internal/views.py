@@ -15,7 +15,7 @@ from rest_framework.decorators import api_view
 
 from internal.models import Image
 from petri_ca.settings import PASSWORD
-from utils import ResponseWithCode, method_not_allowed, r200, r500 , send_delete_transaction_mail, send_error_mail, send_event_verification_mail
+from utils import ResponseWithCode, method_not_allowed, r200, r500 , send_delete_transaction_mail, send_error_mail, send_event_unverification_mail, send_event_verification_mail
 
 
 @api_view(['POST'])
@@ -82,6 +82,13 @@ def verifyTR(request):
         data = json.loads(request.body)
         # Here if no transaction id then it will start with a default of the empty list
         transaction_ids = data.get('transaction_ids', [])
+
+        password = data.get("password" , None)
+        if password is None:
+            return r500("password is missing") 
+        
+        if (password != PASSWORD):
+            return r500("Incorrect password. Event was not added")
         
         failed_transactions = []
 
@@ -92,10 +99,10 @@ def verifyTR(request):
                     failed_transactions.append(transaction_id)
                     continue
                 transaction.verified = True
+                CA = None
                 CA = transaction.CACode
                 if CA:
                     CA.registration +=1
-                    CA.save()
 
                 # send mail to user
                 user = transaction.user_id
@@ -103,6 +110,61 @@ def verifyTR(request):
                     send_event_verification_mail([user.email] + TransactionTable.deserialize_emails(transaction.participants),
                                                 transaction.transaction_id,transaction.event_id.name)
                 #
+                if CA is not None:
+                    CA.save()
+                transaction.save()
+            except TransactionTable.DoesNotExist:
+                print(transaction_id)
+                failed_transactions.append(transaction_id)
+
+            except Exception as e:
+                print(e)
+                 # we are taking any exception here to store in failed list and then tell frontend about it
+                send_error_mail(inspect.stack()[0][3], {"event":"verify:" + transaction_ids.__str__()}, e)
+                failed_transactions.append(transaction_id)
+
+                
+        
+        return ResponseWithCode({
+            'success': True,
+            'failed_transactions': failed_transactions
+        },"Success")
+
+#This is Transaction IDS
+#Here i am just iteration through all the transaction ids and marking them true or false or success if that transaction id exists in the req which i will get 
+@api_view(['POST'])
+def unverifyTRs(request):
+    '''
+        send Event unverified mail to the users
+    '''
+    
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        # Here if no transaction id then it will start with a default of the empty list
+        transaction_ids = data.get('transaction_ids', [])   
+
+        password = data.get("password" , None)
+        if password is None:
+            return r500("password is missing") 
+        
+        if (password != PASSWORD):
+            return r500("Incorrect password. Event was not added")
+        
+        failed_transactions = []
+
+        for transaction_id in transaction_ids:
+            try:
+                transaction = TransactionTable.objects.get(transaction_id=transaction_id)
+
+                transaction.verified = False
+                transaction.archived = True ## equivalent to deleting. This will also ensure no-one puts this trId again in website
+
+                # send mail to user
+                user = transaction.user_id
+                if user and transaction.event_id:
+                    send_event_unverification_mail([user.email] + TransactionTable.deserialize_emails(transaction.participants),
+                                                transaction.transaction_id,transaction.event_id.name)
+
                 transaction.save()
             except TransactionTable.DoesNotExist:
                 print(transaction_id)
@@ -634,7 +696,8 @@ def getDataFromID() -> tuple[dict,bool]:
         
     '''
     try:
-        teamlst = TransactionTable.objects.all()
+        ## get all transactions which are not archived
+        teamlst = TransactionTable.objects.filter(archived = False)
         allEvents = defaultdict(list)
         
         for i, team in enumerate(teamlst):

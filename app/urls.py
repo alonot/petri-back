@@ -17,6 +17,7 @@ urlpatterns = [
     ####
     path('auth/events/apply/paid/',views.apply_event_paid ,name="applyEventpaid"), # review   Zeeshan
     path('auth/events/apply/free/',views.apply_event_free ,name="applyEventfree"), # review  Aditya
+    # path('auth/events/deregister/', views.deregister_event,name="event_deregister"),
     ###
 
 

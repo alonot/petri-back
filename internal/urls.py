@@ -3,7 +3,7 @@ from . import views
 
 urlpatterns = [
     path('verifyTR/',views.verifyTR,name="verifyTR"),  # under progress   get a list of TRs and verify them Zeeshan
-    path('unvertrid/',views.unverifTR,name="unvertrid"), # get a list of TRs and unverify them Zeeshan
+    path('unverifyTR/',views.unverifyTRs,name="unvertrid"), # get a list of TRs and unverify them Zeeshan
     # path('events/unconfirmed',views.getUnconfirmed ,name="unconfirmed"),  # new needed
     path('event/',views.get_event_data,name="getEvent"), 
     path('event/getNextId/',views.get_next_id,name="getNextId"), 

@@ -527,7 +527,7 @@ def updateUserRegTable(tableObject:TransactionTable,participants:list[str],trans
             if user_registration is not None:
                 trIds = TransactionTable.deserialize_emails(user_registration.transactionIds)
                 for trId in trIds:
-                    tr = TransactionTable.objects.filter(transaction_id= trId).only("event_id").first()
+                    tr = TransactionTable.objects.filter(transaction_id= trId, archived = False).only("event_id").first()
                     if tr is not None and  tr.event_id and tr.event_id.event_id == event_id:
                         AlreadyPresentIn.append(participant)
                         break
@@ -644,7 +644,8 @@ def apply_event_paid(request: Request):
             transaction_id=transactionId,
             verified=verified,
             CACode=ca_profile,
-            total_fee = total_fee
+            total_fee = total_fee,
+            archived = False
         )
 
         # Check this above .save() to cancel any save operation
@@ -724,7 +725,8 @@ def apply_event_free(request: Request):
             user_id = user,
             participants=TransactionTable.serialise_emails(participants),
             transaction_id = transaction_id,
-            verified=True
+            verified=True,
+            archived = False
         )
 
         # Check this above .save() to cancel any save operation
@@ -736,6 +738,70 @@ def apply_event_free(request: Request):
             },message,500)
 
         send_event_registration_mail(participants + [user.email],event.name,True)
+
+        return ResponseWithCode({
+            "success":True
+        },"Event applied successfully")
+
+    except Exception as e:
+        send_error_mail(inspect.stack()[0][3], request.data, e) 
+        print(e)
+        return error_response(f"Something went wrong: {str(e)}")
+
+@api_view(['POST'])
+def deregister_event(request: Request):
+    data = request.data
+    if not isinstance(data,(dict,QueryDict)):
+        return r500("Data not sent")
+
+    try:
+        event_id = data.get('eventId',None) 
+        if event_id is None:
+            return r500("null event Id , key is eventId")
+
+        event_id = event_id.strip()
+
+    except KeyError as e:
+        send_error_mail(inspect.stack()[0][3], request.data, e) 
+        return error_response("Missing required fields: participants and eventId")
+
+    user = request.user
+    
+    try:
+
+        try:
+            event = Event.objects.get(event_id = event_id)
+        except Event.DoesNotExist:
+            return r500("No event exists with given event_id")
+        
+        if not user.hasattr('userregistrations'):
+            return r500("Not registered to the event")
+        
+        user_registration = user.userregistrations # type:ignore
+        trIds=TransactionTable.deserialize_emails(user_registration.transactionIds)
+        event_transaction = None
+
+        for trId in trIds:
+            transaction = TransactionTable.objects.filter(transaction_id = trId, archived = False).only("user_id", "verified", "event_id", "transaction_id").first()
+            if transaction is not None and transaction.event_id == event_id:
+                event_transaction = transaction
+
+        if event_transaction is None:
+            return r500("Not registered to the event")
+        
+        event_user = event_transaction.user_id
+
+        if event_user is None:
+            send_error_mail(inspect.stack()[0][3], request.data, f"Unable to find who registered for this event: tr: {event_transaction.transaction_id}") 
+            return r500("Unable to find who registered for this event. Please contact the team.")
+        
+        if event_transaction.verified and "free" not in event_transaction.transaction_id and "IIT Palakkad Student+" not in event_transaction.transaction_id:
+            return r500("Your transaction have been verified. Cannot de-register from verified event registrations.")
+
+        if (event_user.username != user.username):
+            return r500(f"This event have been registered by {event_user.username}. Please use that account to de-register from the event.")
+        
+        event_transaction.delete()
 
         return ResponseWithCode({
             "success":True

@@ -101,7 +101,7 @@ def get_profile_events(user:User):
     trIds=TransactionTable.deserialize_emails(user_registration.transactionIds)
     # print(trIds)
     for trId in trIds:
-        transaction = TransactionTable.objects.filter(transaction_id = trId).only("event_id", "verified").first()
+        transaction = TransactionTable.objects.filter(transaction_id = trId, archived = False ).only("event_id", "verified").first()
         if transaction is not None and transaction.event_id:
             events.append({
                 "eventId": transaction.event_id.event_id,
@@ -126,7 +126,7 @@ def send_forget_password_mail(email , token, name):
 
 def send_delete_transaction_mail(email , event_name):
     subject = 'Transaction not verified!'
-    message = f'Hi , Your transaction_id is not verified for the event {event_name}. Kindly contact admin of Petrichor '
+    message = f'Hi , Your transaction_id is not verified for the event {event_name}. Kindly contact admin of Petrichor.'
     email_from = settings.EMAIL_HOST_USER
     recipient_list = [email]
     send_mail(subject , message ,email_from , recipient_list, fail_silently=True)
@@ -149,6 +149,18 @@ def send_event_registration_mail(emails,event,verified):
 def send_event_verification_mail(emails, trIds,event):
     subject = 'Petrichor Event: ' + event
     message = (f'''We have <strong>verified</strong> your registration for the event :{event} with given transactionId: {trIds}. Please visit the website for venue and date. You can also contact us here 
+      <a href="{settings.FRONTEND_LINK}/contactUs">Contact Us</a>
+    ''')
+    message +="<br> Thank you for participating in Petrichor'25."
+    message = messageUser(" from the Petrichor Team",message)
+    email_from = settings.EMAIL_HOST_USER
+    recipient_list = emails
+    send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=True, html_message=message)
+    return True
+
+def send_event_unverification_mail(emails, trIds,event):
+    subject = 'Petrichor Event: ' + event
+    message = (f'''We have <strong>unverified and deleted</strong> your registration for the event :{event} with given transactionId: {trIds}. Now, you can re-register for the event. You can also contact us here 
       <a href="{settings.FRONTEND_LINK}/contactUs">Contact Us</a>
     ''')
     message +="<br> Thank you for participating in Petrichor'25."
