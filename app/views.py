@@ -238,7 +238,6 @@ def resend_verification(request:Request):
         data = request.data
         if not isinstance(data,(dict,QueryDict)):
             return r500("Data not sent")
-        print(data)
         email = data.get('email',None) 
         if email is None:
             return r500("Email not received") 

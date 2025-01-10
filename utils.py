@@ -187,7 +187,7 @@ def send_user_verification_mail(email:str,token):
                <center><a class="button-green button" style="color:white;" href="{verification_link}">Verify</a></center>
                <p>
                   If above button does not works, you can click on the following link:
-                  <a href="{verification_link}>{verification_link}</a>
+                  <a href="{verification_link}">{verification_link}</a>
                   Ignore this message if you don't recognize this request.  
                   You can also contact us here <a href="{settings.FRONTEND_LINK}/contactUs">Contact Us</a>
                </p>
