@@ -188,9 +188,17 @@ def signup(request:Request):
                         transactionIds =""
                     )
 
-                token = get_forget_token(email)# Generates Token, It lasts for 5 mins
-                send_user_verification_mail(email,token)
 
+                token = get_forget_token(email)# Generates Token, It lasts for 5 mins
+                if not send_user_verification_mail(email,token):
+                    if new_user:
+                        new_user.delete()
+                    if user_registration:
+                        user_registration.delete()
+                    if user_profile:
+                        user_profile.delete()
+                    send_error_mail(inspect.stack()[0][3], request.data, f"Unable to send verification email. {data}")  
+                    return r500(f"Unable to send verification email to {email}. Please check the email or re-try after sometime.")
 
 
                 # print("User Created")
@@ -221,6 +229,37 @@ def signup(request:Request):
 
     except Exception as e:
         print(e)
+        send_error_mail(inspect.stack()[0][3], request.data, e)
+        return r500("Something Bad Happened")
+
+@api_view(['POST'])
+def resend_verification(request:Request):
+    try:
+        data = request.data
+        if not isinstance(data,(dict,QueryDict)):
+            return r500("Data not sent")
+        print(data)
+        email = data.get('email',None) 
+        if email is None:
+            return r500("Email not received") 
+        email = email.strip()
+        
+        try:
+            new_user = User.objects.get(username = email)
+        except User.DoesNotExist:
+            return r500("User Does not exists for given email. Please re-register.")
+
+
+        token = get_forget_token(email)# Generates Token, It lasts for 5 mins
+        if not send_user_verification_mail(email,token):
+            send_error_mail(inspect.stack()[0][3], request.data, f"Reverification: Unable to send verification email. {data}")  
+            return r500("Unable to send verification email. Please re-try after sometime.")
+        
+        return ResponseWithCode({
+            "success": True,
+        },f"A new verification email has been sent to given email: {email}")
+    
+    except Exception as e:
         send_error_mail(inspect.stack()[0][3], request.data, e)
         return r500("Something Bad Happened")
 
@@ -354,7 +393,7 @@ class LoginTokenSerializer(TokenObtainPairSerializer):
                 }
             if not user_profile.verified:
                 return {
-                    "status":400,
+                    "status":511,
                     "success":False,
                     "message":"Please verify you account first. We would have sent you an verification email to the provided email address."
                 }

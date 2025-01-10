@@ -107,8 +107,10 @@ def verifyTR(request):
                 # send mail to user
                 user = transaction.user_id
                 if user and transaction.event_id:
-                    send_event_verification_mail([user.email] + TransactionTable.deserialize_emails(transaction.participants),
-                                                transaction.transaction_id,transaction.event_id.name)
+                    if not send_event_verification_mail([user.email] + TransactionTable.deserialize_emails(transaction.participants),
+                                                transaction.transaction_id,transaction.event_id.name):
+                        failed_transactions.append(f"{transaction_id}:  email not sent")
+                        continue       
                 #
                 if CA is not None:
                     CA.save()
@@ -162,8 +164,10 @@ def unverifyTRs(request):
                 # send mail to user
                 user = transaction.user_id
                 if user and transaction.event_id:
-                    send_event_unverification_mail([user.email] + TransactionTable.deserialize_emails(transaction.participants),
-                                                transaction.transaction_id,transaction.event_id.name)
+                    if not send_event_unverification_mail([user.email] + TransactionTable.deserialize_emails(transaction.participants),
+                                                transaction.transaction_id,transaction.event_id.name):
+                        failed_transactions.append(f"{transaction_id}:  email not sent")
+                        continue
 
                 transaction.save()
             except TransactionTable.DoesNotExist:

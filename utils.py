@@ -1,5 +1,6 @@
 
 import json
+import smtplib
 from django.core.mail import send_mail
 from django.conf import settings
 from django.core.signing import TimestampSigner
@@ -155,7 +156,10 @@ def send_event_verification_mail(emails, trIds,event):
     message = messageUser(" from the Petrichor Team",message)
     email_from = settings.EMAIL_HOST_USER
     recipient_list = emails
-    send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=True, html_message=message)
+    try:
+      send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=False, html_message=message)
+    except smtplib.SMTPException:
+        return False
     return True
 
 def send_event_unverification_mail(emails, trIds,event):
@@ -167,17 +171,23 @@ def send_event_unverification_mail(emails, trIds,event):
     message = messageUser(" from the Petrichor Team",message)
     email_from = settings.EMAIL_HOST_USER
     recipient_list = emails
-    send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=True, html_message=message)
+    try:
+      send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=False, html_message=message)
+    except smtplib.SMTPException:
+        return False
     return True
 
 def send_user_verification_mail(email:str,token):
     subject = 'Petrichor \'25 Registration' 
+    verification_link = f"{settings.BACKEND_LINK}api/login/verify/{token}/"
     message = (f'''<div>
                 <p>We have received a registration request for this email at <a href="{settings.FRONTEND_LINK}">Petrichor25</a>\
                   Please click here to verify your registration <br>
                </p>
-               <center><a class="button-green button" style="color:white;" href="{settings.BACKEND_LINK}api/login/verify/{token}/">Verify</a></center>
+               <center><a class="button-green button" style="color:white;" href="{verification_link}">Verify</a></center>
                <p>
+                  If above button does not works, you can click on the following link:
+                  <a href="{verification_link}>{verification_link}</a>
                   Ignore this message if you don't recognize this request.  
                   You can also contact us here <a href="{settings.FRONTEND_LINK}/contactUs">Contact Us</a>
                </p>
@@ -187,7 +197,10 @@ def send_user_verification_mail(email:str,token):
     message = messageUser(" from the Petrichor Team",message)
     email_from = settings.EMAIL_HOST_USER
     recipient_list = [email]
-    send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=True, html_message=message)
+    try:
+      send_mail(subject , "",from_email = email_from , recipient_list=recipient_list, fail_silently=False, html_message=message)
+    except smtplib.SMTPException:
+        return False
     return True
 
 def get_forget_token(email):

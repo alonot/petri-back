@@ -7,6 +7,7 @@ urlpatterns = [
     path('login/',views.LoginUser.as_view(),name="login"), # Priyanshu
     path('login/verify/<token>/',views.verifyUser,name="loginVerify"), # Zeeshan
     path('register/', views.signup, name="signup"), # Zeeshan
+    path('login/reverify/', views.resend_verification, name="resend_verification"), # Zeeshan
     path('forget-password/',views.ForgetPassword , name='forgetpassword'), # Zeeshan
     path('change-password/<token>/',views.ChangePassword , name="changepassword"), # Aditya
     ####
