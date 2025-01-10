@@ -144,7 +144,11 @@ def send_event_registration_mail(emails,event,verified):
     message = messageUser(" from the Petrichor Team",message)
     email_from = settings.EMAIL_HOST_USER
     recipient_list = emails
-    send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=True, html_message=message)
+    try:
+      send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=False, html_message=message)
+    except smtplib.SMTPException as e:
+        print(e)
+        return False
     return True
 
 def send_event_verification_mail(emails, trIds,event):
@@ -159,6 +163,7 @@ def send_event_verification_mail(emails, trIds,event):
     try:
       send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=False, html_message=message)
     except smtplib.SMTPException:
+        print(e)
         return False
     return True
 
@@ -174,6 +179,7 @@ def send_event_unverification_mail(emails, trIds,event):
     try:
       send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=False, html_message=message)
     except smtplib.SMTPException:
+        print(e)
         return False
     return True
 
@@ -200,6 +206,7 @@ def send_user_verification_mail(email:str,token):
     try:
       send_mail(subject , "",from_email = email_from , recipient_list=recipient_list, fail_silently=False, html_message=message)
     except smtplib.SMTPException:
+        print(e)
         return False
     return True
 

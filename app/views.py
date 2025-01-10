@@ -694,7 +694,11 @@ def apply_event_paid(request: Request):
                 "registered_users": regUsers
             },message,500)
 
-        send_event_registration_mail(participants + [user.email],event.name,verified)
+        if not send_event_registration_mail(participants + [user.email],event.name,verified):
+            send_error_mail(inspect.stack()[0][3], request.data, f"Mail not sent while registering for paid event.") 
+            return ResponseWithCode({
+            "success":False
+        },"Event applied successfully. We will verify the transaction in some time. You can check the status in your profile.")
 
         return ResponseWithCode({
             "success":True
@@ -775,7 +779,11 @@ def apply_event_free(request: Request):
                 "registered_users": regUsers
             },message,500)
 
-        send_event_registration_mail(participants + [user.email],event.name,True)
+        if not send_event_registration_mail(participants + [user.email],event.name,True):
+            send_error_mail(inspect.stack()[0][3], request.data, f"Mail not sent while registering for free event.") 
+            return ResponseWithCode({
+            "success":False
+        },"Event applied successfully. You can check the status in your profile.")
 
         return ResponseWithCode({
             "success":True
