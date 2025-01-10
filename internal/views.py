@@ -645,7 +645,10 @@ def updateEvent(request: Request):
             if dt_minMember is not None:
                 event.minMember=int(dt_minMember)
                 if (event.minMember > event.maxMember):
-                    return r500(f"provided minMembers:{dt_minMember} cannot exceed maxMembers: {event.maxMember}")
+                    if dt_maxMember is not None and event.minMember <= int(dt_maxMember):
+                        pass
+                    else:
+                        return r500(f"provided minMembers:{dt_minMember} cannot exceed maxMembers: {event.maxMember}")
             if dt_maxMember is not None:
                 event.maxMember=int(dt_maxMember)
                 if (event.minMember > event.maxMember):
