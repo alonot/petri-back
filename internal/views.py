@@ -36,7 +36,7 @@ def getUsersData():
     Returns a list of users
     '''
     try:
-        users = User.objects.all()
+        users = User.objects.all().order_by('date_joined').reverse()
         allUsers = []
         for user in users:
             if not hasattr(user,'profile'):
@@ -53,6 +53,7 @@ def getUsersData():
                 "gradyear":profile.gradYear,
                 "stream":profile.stream,
                 "joined":profile.joined.strftime("%d/%m/%Y, %H:%M:%S"),
+                "verified": profile.verified,
                 "college":"",
                 "CA":"",
                 "CAregistrations":"",
