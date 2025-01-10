@@ -96,7 +96,7 @@ def verifyTR(request):
             try:
                 transaction = TransactionTable.objects.get(transaction_id=transaction_id)
                 if transaction.verified:
-                    failed_transactions.append(transaction_id)
+                    failed_transactions.append(f"{transaction_id}:  already verified")
                     continue
                 transaction.verified = True
                 CA = None
@@ -115,13 +115,13 @@ def verifyTR(request):
                 transaction.save()
             except TransactionTable.DoesNotExist:
                 print(transaction_id)
-                failed_transactions.append(transaction_id)
+                failed_transactions.append(f"{transaction_id}:  Does Not Exists")
 
             except Exception as e:
                 print(e)
                  # we are taking any exception here to store in failed list and then tell frontend about it
                 send_error_mail(inspect.stack()[0][3], {"event":"verify:" + transaction_ids.__str__()}, e)
-                failed_transactions.append(transaction_id)
+                failed_transactions.append(f"{transaction_id}:  {e}")
 
                 
         
@@ -168,13 +168,13 @@ def unverifyTRs(request):
                 transaction.save()
             except TransactionTable.DoesNotExist:
                 print(transaction_id)
-                failed_transactions.append(transaction_id)
+                failed_transactions.append(f"{transaction_id}:  does not exists")
 
             except Exception as e:
                 print(e)
                  # we are taking any exception here to store in failed list and then tell frontend about it
                 send_error_mail(inspect.stack()[0][3], {"event":"verify:" + transaction_ids.__str__()}, e)
-                failed_transactions.append(transaction_id)
+                failed_transactions.append(f"{transaction_id}:  {e}")
                 
         
         return ResponseWithCode({
