@@ -1,4 +1,5 @@
 
+from time import time
 from django.contrib.auth.models import AnonymousUser
 import json
 from collections import OrderedDict
@@ -124,7 +125,19 @@ class PetrichorAuthMiddleware(object):
 
 
         if to_profile:
+            start_time = time()
             profiler.create_stats()
+            # stream = io.StringIO()
+            # stats = pstats.Stats(profiler)
+            # stats.strip_dirs()
+
+            # # Sort by total time ('tottime') rather than cumulative time
+            # stats.sort_stats('tottime')
+
+            # # Print top 10 results
+            # profiler.create_stats()
+            # stats.print_stats(10)
+
             profile_dict = profiler.stats
 
             total_calls = sum(stats[0] for stats in profile_dict.values())  # No of total function calls
@@ -134,18 +147,20 @@ class PetrichorAuthMiddleware(object):
             # Prepare the header
             header = f"{primitive_calls} function calls ({total_calls} primitive calls) in {total_time:.3f} seconds\n\nOrdered by: standard name\n"
 
-            sorted_profile = sorted(profile_dict.items(), key=lambda item: item[1][3], reverse=True)
+            sorted_profile = sorted(profile_dict.items(), key=lambda item: item[1][2], reverse=True)
 
             formatted_stats = "ncalls  tottime   percall   cumtime   percall   filename:lineno(function)\n"
-            for (file, line, func), stats in sorted_profile[:10]:
-                
+            # connection_time = ""
+            for i, ( (file, line, func), stats ) in enumerate(sorted_profile[:20]):
+                func = str(func).replace('<','&lt').replace('>','&gt')
                 ncalls = stats[0]  
                 tottime = stats[2]  
                 percall = tottime / ncalls if ncalls else 0  
                 cumtime = stats[3]  
                 percall_cum = cumtime / ncalls if ncalls else 0  
- 
-                formatted_stats += f"{ncalls:6}  {tottime:8.6f}  {percall:8.6f}  {cumtime:8.6f}  {percall_cum:8.6f}  {file.split('\\')[-1]}:{line}({func})\n"
+
+                # if i <= 10:
+                formatted_stats += f"{ncalls:6}  {tottime:8.6f}  {percall:8.6f}  {cumtime:8.6f}  {percall_cum:8.6f}  {file.split('\\')[-1]}:{line}({str(func)})\n"
 
             profiling_data_str = header + formatted_stats            
             profiling_data = profiling_data_str.replace(" ", "&nbsp;")
@@ -162,6 +177,7 @@ class PetrichorAuthMiddleware(object):
                 </head>
                 <body>
                     <h1>Profiling Data</h1>
+                    <pre>profiling time:    {time() - start_time}</pre>
                     <pre>{profiling_data}</pre>
                 </body>
                 </html>
