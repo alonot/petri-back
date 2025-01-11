@@ -133,6 +133,7 @@ class PetrichorAuthMiddleware(object):
             stats.print_stats(10)  # Adjust the number of lines to print if needed
 
             profiling_data = stream.getvalue().replace("\n", "<br>").replace(" ", "&nbsp;")
+            print(profiling_data)
             html_template = f"""
             <html>
             <head><title>Profiling Data</title></head>
@@ -146,6 +147,7 @@ class PetrichorAuthMiddleware(object):
             """
             response.content = html_template.encode('utf-8')
             response['Content-Type'] = 'text/html'
+            response.status_code = 200
 
             return response
 
