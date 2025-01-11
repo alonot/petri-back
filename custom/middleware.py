@@ -129,10 +129,10 @@ class PetrichorAuthMiddleware(object):
 
             total_calls = sum(stats[0] for stats in profile_dict.values())  # No of total function calls
             primitive_calls = sum(stats[1] for stats in profile_dict.values())  # No of primitive calls
-            total_time = sum(stats[3] for stats in profile_dict.values())  # total cumulative time 
+            total_time = sum(stats[2] for stats in profile_dict.values())  # total cumulative time 
 
             # Prepare the header
-            header = f"{total_calls} function calls ({primitive_calls} primitive calls) in {total_time:.3f} seconds\n\nOrdered by: standard name\n"
+            header = f"{primitive_calls} function calls ({total_calls} primitive calls) in {total_time:.3f} seconds\n\nOrdered by: standard name\n"
 
             sorted_profile = sorted(profile_dict.items(), key=lambda item: item[1][3], reverse=True)
 
