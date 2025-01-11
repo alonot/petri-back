@@ -164,6 +164,9 @@ class PetrichorAuthMiddleware(object):
 
             profiling_data_str = header + formatted_stats            
             profiling_data = profiling_data_str.replace(" ", "&nbsp;")
+            respon_data= ""
+            if not exempt and hasattr(response,'data'):
+                respon_data = json.dumps(response.data) 
             
             html_template = f"""
                 <html>
@@ -179,6 +182,7 @@ class PetrichorAuthMiddleware(object):
                     <h1>Profiling Data</h1>
                     <pre>profiling time:    {time() - start_time}</pre>
                     <pre>{profiling_data}</pre>
+                    <pre>{respon_data}</pre>
                 </body>
                 </html>
                 """
