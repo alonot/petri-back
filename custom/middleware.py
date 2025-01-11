@@ -39,6 +39,7 @@ class PetrichorAuthMiddleware(object):
             NOTE- Any None handled error raised by this functions is/must be handled by the caller function.
         '''
         path = (request.get_full_path())
+        print(path)
         if (path.endswith("?prof")):
             print("profiling")
             profiler = cProfile.Profile()
