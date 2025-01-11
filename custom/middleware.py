@@ -5,6 +5,9 @@ from collections import OrderedDict
 from rest_framework_simplejwt.exceptions import TokenError
 from django.http import HttpRequest, HttpResponse
 from app.models import Profile
+import cProfile
+import pstats
+import io
 
 from utils import AUTH_EXEMPT, PetrichorAuthenticator, Refreshserializer
 
@@ -35,6 +38,11 @@ class PetrichorAuthMiddleware(object):
             }
             NOTE- Any None handled error raised by this functions is/must be handled by the caller function.
         '''
+        path = (request.get_full_path())
+        if (path.endswith("?prof")):
+            profiler = cProfile.Profile()
+            profiler.enable()
+
         exempt = True
         # for url in AUTH_EXEMPT:
         if request.path.startswith('/api/auth'):
@@ -110,6 +118,32 @@ class PetrichorAuthMiddleware(object):
         response:HttpResponse = self.get_response(request)
         # Code to be executed for each request/response after
         # the view is called.
+
+
+        if (path.endswith("?prof")):
+            profiler.disable()
+            stream = io.StringIO()
+            stats = pstats.Stats(profiler, stream=stream)
+            stats.strip_dirs()
+            stats.sort_stats('cumulative')
+            stats.print_stats(10)  # Adjust the number of lines to print if needed
+
+            profiling_data = stream.getvalue().replace("\n", "<br>").replace(" ", "&nbsp;")
+            html_template = f"""
+            <html>
+            <head><title>Profiling Data</title></head>
+            <body>
+                <h1>Request Profiling Data</h1>
+                <p>Path: {request.path}</p>
+                <p>Method: {request.method}</p>
+                <pre>{profiling_data}</pre>
+            </body>
+            </html>
+            """
+            response.content = html_template.encode('utf-8')
+            response['Content-Type'] = 'text/html'
+
+            return response
 
         # if everything went correctly then we will append the log in details with the response
         if not exempt and hasattr(response,'data'):
