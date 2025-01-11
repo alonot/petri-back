@@ -40,6 +40,7 @@ class PetrichorAuthMiddleware(object):
         '''
         path = (request.get_full_path())
         if (path.endswith("?prof")):
+            print("profiling")
             profiler = cProfile.Profile()
             profiler.enable()
 
@@ -121,6 +122,7 @@ class PetrichorAuthMiddleware(object):
 
 
         if (path.endswith("?prof")):
+            print("profiling")
             profiler.disable()
             stream = io.StringIO()
             stats = pstats.Stats(profiler, stream=stream)
