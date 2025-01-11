@@ -124,16 +124,32 @@ class PetrichorAuthMiddleware(object):
 
 
         if to_profile:
-            # print("profiling")
-            profiler.disable()
-            stream = io.StringIO()
-            stats = pstats.Stats(profiler, stream=stream)
-            stats.strip_dirs()
-            stats.sort_stats('cumulative')
-            stats.print_stats(10)  # Adjust the number of lines to print if needed
+            profiler.create_stats()
+            profile_dict = profiler.stats
 
-            profiling_data = stream.getvalue().replace("\n", "<br>").replace(" ", "&nbsp;")
-            print("profile data",profiling_data)
+            total_calls = sum(stats[0] for stats in profile_dict.values())  # No of total function calls
+            primitive_calls = sum(stats[1] for stats in profile_dict.values())  # No of primitive calls
+            total_time = sum(stats[3] for stats in profile_dict.values())  # total cumulative time 
+
+            # Prepare the header
+            header = f"{total_calls} function calls ({primitive_calls} primitive calls) in {total_time:.3f} seconds\n\nOrdered by: standard name\n"
+
+            sorted_profile = sorted(profile_dict.items(), key=lambda item: item[1][3], reverse=True)
+
+            formatted_stats = "ncalls  tottime   percall   cumtime   percall   filename:lineno(function)\n"
+            for (file, line, func), stats in sorted_profile[:10]:
+                
+                ncalls = stats[0]  
+                tottime = stats[2]  
+                percall = tottime / ncalls if ncalls else 0  
+                cumtime = stats[3]  
+                percall_cum = cumtime / ncalls if ncalls else 0  
+ 
+                formatted_stats += f"{ncalls:6}  {tottime:8.6f}  {percall:8.6f}  {cumtime:8.6f}  {percall_cum:8.6f}  {file.split('\\')[-1]}:{line}({func})\n"
+
+            profiling_data_str = header + formatted_stats            
+            profiling_data = profiling_data_str.replace(" ", "&nbsp;")
+            
             html_template = f"""
                 <html>
                 <head>
