@@ -42,7 +42,8 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 
-if DEBUG:
+
+if not DEBUG:
     CSRF_TRUSTED_ORIGINS = [
         'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://x.petrichor.events',"https://finance-petrichor.vercel.app","https://petrichor-backend.vercel.app",
     ]
@@ -89,8 +90,6 @@ INSTALLED_APPS = [
     'internal',
 ]
 
-DJANGO_CPROFILE_MIDDLEWARE_REQUIRE_STAFF = False
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -100,8 +99,7 @@ MIDDLEWARE = [
     'custom.middleware.PetrichorAuthMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    "django_cprofile_middleware.middleware.ProfilerMiddleware",
+    'django.contrib.messages.middleware.MessageMiddleware'
 ]
 
 ROOT_URLCONF = 'petri_ca.urls'
