@@ -40,8 +40,8 @@ class PetrichorAuthMiddleware(object):
         '''
         # path = (request.get_full_path())
         # print(path)
-        profiler = request.GET.get('prof', False) == ""
-        if profiler:
+        to_profile = request.GET.get('prof', False) == ""
+        if to_profile:
             # print("profiling")
             profiler = cProfile.Profile()
             profiler.enable()
@@ -123,7 +123,7 @@ class PetrichorAuthMiddleware(object):
         # the view is called.
 
 
-        if profiler:
+        if to_profile:
             # print("profiling")
             profiler.disable()
             stream = io.StringIO()
@@ -133,18 +133,23 @@ class PetrichorAuthMiddleware(object):
             stats.print_stats(10)  # Adjust the number of lines to print if needed
 
             profiling_data = stream.getvalue().replace("\n", "<br>").replace(" ", "&nbsp;")
-            print(profiling_data)
+            # print(profiling_data)
             html_template = f"""
-            <html>
-            <head><title>Profiling Data</title></head>
-            <body>
-                <h1>Request Profiling Data</h1>
-                <p>Path: {request.path}</p>
-                <p>Method: {request.method}</p>
-                <pre>{profiling_data}</pre>
-            </body>
-            </html>
-            """
+                <html>
+                <head>
+                    <title>Profiling Data</title>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.5; }}
+                        pre {{ background: #f4f4f4; padding: 10px; border-radius: 5px; }}
+                        h1 {{ color: #333; }}
+                    </style>
+                </head>
+                <body>
+                    <h1>Profiling Data</h1>
+                    <pre>{profiling_data}</pre>
+                </body>
+                </html>
+                """
             response.content = html_template.encode('utf-8')
             response['Content-Type'] = 'text/html'
             response.status_code = 200
