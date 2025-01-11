@@ -133,7 +133,7 @@ class PetrichorAuthMiddleware(object):
             stats.print_stats(10)  # Adjust the number of lines to print if needed
 
             profiling_data = stream.getvalue().replace("\n", "<br>").replace(" ", "&nbsp;")
-            # print(profiling_data)
+            print("profile data",profiling_data)
             html_template = f"""
                 <html>
                 <head>
