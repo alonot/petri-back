@@ -1,7 +1,7 @@
 
 import json
 import smtplib
-from django.core.mail import send_mail
+from django.core.mail import send_mail, send_mass_mail
 from django.conf import settings
 from django.core.signing import TimestampSigner
 
@@ -162,7 +162,7 @@ def send_event_verification_mail(emails, trIds,event):
     recipient_list = emails
     try:
       send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=False, html_message=message)
-    except smtplib.SMTPException:
+    except smtplib.SMTPException as e:
         print(e)
         return False
     return True
@@ -178,7 +178,7 @@ def send_event_unverification_mail(emails, trIds,event):
     recipient_list = emails
     try:
       send_mail(subject , "",from_email = email_from , recipient_list=recipient_list,fail_silently=False, html_message=message)
-    except smtplib.SMTPException:
+    except smtplib.SMTPException as e:
         print(e)
         return False
     return True
@@ -205,7 +205,7 @@ def send_user_verification_mail(email:str,token):
     recipient_list = [email]
     try:
       send_mail(subject , "",from_email = email_from , recipient_list=recipient_list, fail_silently=False, html_message=message)
-    except smtplib.SMTPException:
+    except smtplib.SMTPException as e:
         print(e)
         return False
     return True

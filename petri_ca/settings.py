@@ -42,7 +42,7 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 
-if not DEBUG:
+if DEBUG:
     CSRF_TRUSTED_ORIGINS = [
         'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://x.petrichor.events',"https://finance-petrichor.vercel.app","https://petrichor-backend.vercel.app",
     ]
@@ -89,6 +89,8 @@ INSTALLED_APPS = [
     'internal',
 ]
 
+DJANGO_CPROFILE_MIDDLEWARE_REQUIRE_STAFF = False
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -99,6 +101,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    "django_cprofile_middleware.middleware.ProfilerMiddleware",
 ]
 
 ROOT_URLCONF = 'petri_ca.urls'
@@ -139,7 +142,7 @@ WSGI_APPLICATION = 'petri_ca.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-if DEBUG:
+if not DEBUG:
     print("Using Local Database")
     DATABASES = {
         'default': {
