@@ -165,7 +165,7 @@ class PetrichorAuthMiddleware(object):
             profiling_data_str = header + formatted_stats            
             profiling_data = profiling_data_str.replace(" ", "&nbsp;")
             respon_data= ""
-            if not exempt and hasattr(response,'data'):
+            if hasattr(response,'data'):
                 respon_data = json.dumps(response.data) 
             
             html_template = f"""
