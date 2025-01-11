@@ -38,10 +38,11 @@ class PetrichorAuthMiddleware(object):
             }
             NOTE- Any None handled error raised by this functions is/must be handled by the caller function.
         '''
-        path = (request.get_full_path())
-        print(path)
-        if (path.endswith("?prof")):
-            print("profiling")
+        # path = (request.get_full_path())
+        # print(path)
+        profiler = request.GET.get('prof', False) == ""
+        if profiler:
+            # print("profiling")
             profiler = cProfile.Profile()
             profiler.enable()
 
@@ -122,8 +123,8 @@ class PetrichorAuthMiddleware(object):
         # the view is called.
 
 
-        if (path.endswith("?prof")):
-            print("profiling")
+        if profiler:
+            # print("profiling")
             profiler.disable()
             stream = io.StringIO()
             stats = pstats.Stats(profiler, stream=stream)
