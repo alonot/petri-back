@@ -16,7 +16,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.signing import SignatureExpired,BadSignature
 
 from petri_ca.settings import FRONTEND_LINK
-from utils import ResponseWithCode, get_email_from_token, get_forget_token, get_profile_data, get_profile_events, has_duplicate,\
+from utils import CLOSED_REGISTRATIONS, ResponseWithCode, get_email_from_token, get_forget_token, get_profile_data, get_profile_events, has_duplicate,\
 r500,send_error_mail, method_not_allowed, send_event_registration_mail , send_forget_password_mail,error_response, send_user_verification_mail
 from .models import EMAIL_SEPARATOR, Institute, Profile, TransactionTable,Event,CAProfile,UserRegistrations
 from django.db.utils import IntegrityError
@@ -617,6 +617,13 @@ def apply_event_paid(request: Request):
             send_error_mail(inspect.stack()[0][3], request.data, e) 
             return error_response("Missing required fields: participants, eventId, and transactionId")
         
+        try:
+            event = Event.objects.get(event_id = event_id)
+        except Event.DoesNotExist:
+            return r500("No event exists with given event_id")
+        
+        if event.event_id in CLOSED_REGISTRATIONS:
+            return r500(f"Registrations for the event: {event.name} is closed.")
 
         user = request.user
         if isinstance(user,AnonymousUser):
@@ -636,10 +643,8 @@ def apply_event_paid(request: Request):
         if TransactionTable.objects.filter(transaction_id=transactionId).exists():
             return r500("Duplicate transaction ID used for another event")
 
-        try:
-            event = Event.objects.get(event_id = event_id)
-        except Event.DoesNotExist:
-            return r500("No event exists with given event_id")
+        
+
         
         if event.fee == 0:
             return r500("This event is free. Please use api/event/free/")
@@ -733,15 +738,19 @@ def apply_event_free(request: Request):
     user = request.user
     
     try:
-        if has_duplicate(participants + [user.email]):
-            return r500("Duplicate emails provided in participants")
-        
-        transaction_id = f"{user.id}{event_id}free{time.time()}"
 
         try:
             event = Event.objects.get(event_id = event_id)
         except Event.DoesNotExist:
             return r500("No event exists with given event_id")
+        
+        if event.event_id in CLOSED_REGISTRATIONS:
+            return r500(f"Registrations for the event: {event.name} is closed.")
+
+        if has_duplicate(participants + [user.email]):
+            return r500("Duplicate emails provided in participants")
+        
+        transaction_id = f"{user.id}{event_id}free{time.time()}"
         
         # Check if participants' emails are from IIT Palakkad
         verified=False

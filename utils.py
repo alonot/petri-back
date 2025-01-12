@@ -18,6 +18,7 @@ PetrichorAuthenticator = PetrichorJWTAuthentication()
 PetrichroSigner = TimestampSigner(key=settings.FORGET_KEY,salt=settings.FORGET_SALT_KEY)
 
 AUTH_EXEMPT = ['/admin/','/internal/','/api/register/','/api/login/','/api/forget-password/','/api/change-password']
+CLOSED_REGISTRATIONS = ["TP06"]
 # this is not used now.
 
 # Helper functions
