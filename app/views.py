@@ -16,11 +16,12 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.signing import SignatureExpired,BadSignature
 
 from petri_ca.settings import FRONTEND_LINK
+from petri_pydantic.models import AuthRequest, CARequest, EmailRequest, EventFree, EventPaid, Grievance, LoginRequest, NewPasswordRequest, PasswordRequest, SignUp
+from pydantic import ValidationError as VLError
 from utils import CLOSED_REGISTRATIONS, ResponseWithCode, get_email_from_token, get_forget_token, get_profile_data, get_profile_events, has_duplicate,\
 r500,send_error_mail, method_not_allowed, send_event_registration_mail , send_forget_password_mail,error_response, send_user_verification_mail
 from .models import EMAIL_SEPARATOR, Institute, Profile, TransactionTable,Event,CAProfile,UserRegistrations
 from django.db.utils import IntegrityError
-from django.utils.datastructures import MultiValueDictKeyError
 import inspect
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -30,69 +31,6 @@ from django.core.mail import send_mail
 
 TokenSerializer = TokenObtainPairSerializer()
 
-def validateSignUpData(data: QueryDict | dict):
-    username = data.get('username', '').strip()
-    email = data.get('email', '')
-    pass1 = data.get('password', '')
-    phone = data.get('phone', '')
-    insti_name = data.get('college', '')
-    gradyear = data.get('gradyear', '')
-    insti_type = data.get('institype', '')
-    stream = data.get('stream', '')
-
-    def is_valid_string(s, pattern):
-        return bool(re.match(pattern, s))
-
-    valid = False
-    message = ""
-
-    try:
-        validate_email(email)
-    except ValidationError:
-        return False, "Invalid Email provided"
-    
-    if not isinstance(username, str):
-        message = "Wrong Username format: must be str"
-    elif not (1 <= len(username) <= 25):
-        message = "Wrong Username format: Username must be between 1 and 25 characters"
-    elif not is_valid_string(username, r"^[a-zA-Z0-9_\s]+$"):
-        message = "Wrong Username format: can contain only {a-z, A-Z, 0-9, _, space}"
-    elif not email:
-        message = "Email cannot be empty"
-    elif isinstance(phone, str) and not phone.isdigit():
-        message = "Wrong Phone Format"
-    elif len(phone) != 10:
-        message = "Phone Number must be of length: 10"
-    elif len(pass1) < 8:
-        message = "Password must be at least 8 characters"
-    elif not is_valid_string(pass1, r"^[a-zA-Z0-9_\s\.]+$"):
-        message = "Password can contain only {a-z, A-Z, 0-9, _, space, .}"
-    elif insti_type and insti_type != "neither":
-        if not insti_name:
-            message = "Institute Name is required"
-        elif len(insti_name) > 100:
-            message = "Institute Name must be at most 100 characters"
-        elif not is_valid_string(insti_name, r"^[a-zA-Z0-9_\s\.,\-]+$"):
-            message = "Institute Name can contain only {a-z, A-Z, 0-9, _, space, .}"
-        elif isinstance(gradyear, str) and (not gradyear.isdigit() or not gradyear):
-            message = "GradYear required and must be numeric"
-        elif insti_type == "college":
-            if not stream:
-                message = "Please specify your degree"
-            elif len(stream) > 100:
-                message = "Degree must be at most 100 characters"
-            elif not is_valid_string(stream, r"^[a-zA-Z0-9_\s\.\-,]+$"):
-                message = "Degree can contain only {a-z, A-Z, 0-9, _, space, .}"
-            else:
-                valid = True
-        else:
-            valid = True
-    else:
-        valid = True
-
-    return valid, message
-
-
 @api_view(['POST'])
 def signup(request:Request):
     '''
@@ -101,144 +39,137 @@ def signup(request:Request):
     if request.method != 'POST':
         return method_not_allowed()
 
+    data = request.data
+    if (not data) or not isinstance(data,(dict,QueryDict)):
+        return r500("Data not provided")
+    
+    if isinstance(data, QueryDict):
+        data = data.dict()
+
     try:
         # Retreiving all data
-        data = request.data
-        if (not data) or not isinstance(data,(dict,QueryDict)):
-            return r500("Data not provided")
-
-        username = data.get('username',None) 
-        email = data.get('email',None) 
-        password = data.get('password',None) 
-        phone = data.get('phone',None) 
-        college = data.get('college',None) 
-        gradyear = data.get('gradyear',None) 
-        institype = data.get('institype',None) 
-        stream = data.get('stream',None) 
-        if username is None:
-            return r500("username required")
-        elif email is None:
-            return r500("email required")
-        elif password is None:
-            return r500("password required")
-        elif phone is None:
-            return r500("phone required")
-        elif gradyear is None:
-            return r500("gradyear required")
-        elif institype is None:
-            return r500("institype required")
-        username = username.strip()
-        
         try:
-            valid,message = validateSignUpData(data)  
-            if not valid:
-                return r500(message)
-        except MultiValueDictKeyError or ValueError or KeyError:
-            return r500("Data received does not contains all the required fields")
-
+            request_data = SignUp.model_validate(data)
+        except VLError as e:
+            return r500(f"{e}")
         
         # Checking if User already exists
-        try:
-            User.objects.get(username=email)
+        user_exists = User.objects.filter(username=request_data.email).exists()
+        if user_exists:
             return ResponseWithCode({
                 "success":False,
-                "username":username
+                "username":request_data.username
             },
             "Email already registered",400)
-        except User.DoesNotExist:
-            try:
-                new_user = User(username=email,email = email)
-                new_user.set_password(password)
-                new_user.is_active = True
-            except IntegrityError as e: # Email alreeady exists
-                # send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
-                return r500('Email already exists')
+    
+        try:
+            new_user = User(username=request_data.email,email = request_data.email)
+            new_user.set_password(request_data.password)
+            new_user.is_active = True
+        except IntegrityError as e: # Email alreeady exists
+            # send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
+            return r500('Email already exists')
+        
+        user_registration = None
+        user_profile = None
+        user_saved = False
+        profile_saved = False
+        userreg_saved = False
+        try:
+            # creates or gets the InstituteId
+            if request_data.institype != "neither":
+                institute = Institute.objects.get_or_create(instiName=request_data.college, institutionType=request_data.institype)[0]
+                # institute = Institute.objects.get(instiName=instituteID)
+            else:
+                institute = Institute.objects.get_or_create(instiName='NoInsti', institutionType=request_data.institype)[0]
+            institute.save() # Kept for safety {create will automatically save}
             
-            user_registration = None
-            user_profile = None
-            try:
-                # creates or gets the InstituteId
-                if institype != "neither":
-                    institute = Institute.objects.get_or_create(instiName=college, institutionType=institype)[0]
-                    # institute = Institute.objects.get(instiName=instituteID)
-                else:
-                    institute = Institute.objects.get_or_create(instiName='NoInsti', institutionType=institype)[0]
-                institute.save() # Kept for safety {create will automatically save}
-                
-                new_user.save()
-                user_profile = Profile(username=username, 
-                                    user=new_user,
-                                    phone=phone,
-                                    instituteID=institute,
-                                    gradYear=gradyear,
-                                    stream=stream,
-                                    verified = False)
-                
-                # saving the profile and user. If any of above steps fails the Profile will not be created
-                user_profile.save()
-
-                user_registration = UserRegistrations.objects.filter(email = email).first()
-                if user_registration is not None:
-                    user_registration.user = new_user
-                    user_registration.save()
-                else:
-                    UserRegistrations.objects.create(
-                        user = new_user,
-                        email = email,
-                        transactionIds =""
-                    )
-
-
-                token = get_forget_token(email)# Generates Token, It lasts for 5 mins
-                if not send_user_verification_mail(email,token):
-                    if new_user:
-                        new_user.delete()
-                    if user_registration:
-                        user_registration.delete()
-                    if user_profile:
-                        user_profile.delete()
-                    send_error_mail(inspect.stack()[0][3], request.data, f"Unable to send verification email. {data}")  
-                    return r500(f"Unable to send verification email to {email}. Please check the email or re-try after sometime.")
-
-
-                # print("User Created")
-                return ResponseWithCode({
-                    "success":True,
-                    "username":username
-                },"We have sent an verification request to your email. Please verify the registration.")
+            new_user.save()
+            user_saved =True
+            user_profile = Profile(username=request_data.username, 
+                                user=new_user,
+                                phone=request_data.phone,
+                                instituteID=institute,
+                                gradYear=request_data.gradyear,
+                                stream=request_data.stream,
+                                verified = False)
             
-            except IntegrityError as e:
-                if new_user:
+            # saving the profile and user. If any of above steps fails the Profile will not be created
+            user_profile.save()
+            profile_saved = True
+
+            user_registration = UserRegistrations.objects.filter(email = request_data.email).first()
+            if user_registration is not None:
+                user_registration.user = new_user
+                user_registration.save()
+            else:
+                UserRegistrations.objects.create(
+                    user = new_user,
+                    email = request_data.email,
+                    transactionIds =""
+                )
+            userreg_saved = True
+
+
+            token = get_forget_token(request_data.email)# Generates Token, It lasts for 5 mins
+            if not send_user_verification_mail(request_data.email,token):
+                if user_saved:
                     new_user.delete()
-                if user_registration:
+                if userreg_saved and user_registration is not None:
                     user_registration.delete()
-                if user_profile:
+                if profile_saved:
                     user_profile.delete()
-                # send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
-                return r500("User already exists. Try something different.")
-            except Exception as e:
-                if new_user:
-                    new_user.delete()
-                if user_registration:
-                    user_registration.delete()
-                if user_profile:
-                    user_profile.delete()
-                send_error_mail(inspect.stack()[0][3], request.data, e)  
-                r500("Something failed")
+                send_error_mail(inspect.stack()[0][3], request.data, f"Unable to send verification email. {data}")  
+                return r500(f"Unable to send verification email to {request_data.email}. Please check the email or re-try after sometime.")
+
+
+            # print("User Created")
+            return ResponseWithCode({
+                "success":True,
+                "username":request_data.username
+            },"We have sent an verification request to your email. Please verify the registration.")
+        
+        except IntegrityError as e:
+            if user_saved:
+                new_user.delete()
+            if userreg_saved and user_registration is not None:
+                user_registration.delete()
+            if profile_saved and user_profile is not None:
+                user_profile.delete()
+            # send_error_mail(inspect.stack()[0][3], request.data, e)  # Leave this commented otherwise every wrong login will send an error mail
+            return r500("User already exists. Try something different.")
+        except Exception as e:
+            if user_saved:
+                new_user.delete()
+            if userreg_saved and user_registration is not None:
+                user_registration.delete()
+            if profile_saved and user_profile is not None:
+                user_profile.delete()
+            send_error_mail(inspect.stack()[0][3], request.data, e)  
+            r500("Something failed")
 
 
     except Exception as e:
         print(e)
-        send_error_mail(inspect.stack()[0][3], request.data, e)
+        send_error_mail(inspect.stack()[0][3], data, e)
         return r500("Something Bad Happened")
 
 @api_view(['POST'])
 def resend_verification(request:Request):
+    data = request.data
+    if (not data) or not isinstance(data,(dict,QueryDict)):
+        return r500("Data not provided")
+    
+    if isinstance(data, QueryDict):
+        data = data.dict()
+    
     try:
-        data = request.data
-        if not isinstance(data,(dict,QueryDict)):
-            return r500("Data not sent")
-        email = data.get('email',None) 
+        try:
+            request_data = EmailRequest.model_validate(data)
+        except VLError as e:
+            return r500(f"{e}")
+
+        email = request_data.email 
         if email is None:
             return r500("Email not received") 
         email = email.strip()
@@ -272,11 +203,19 @@ def ForgetPassword(request:Request):
     '''
     if request.method != 'POST':
         return method_not_allowed()
+    data = request.data
+    if (not data) or not isinstance(data,(dict,QueryDict)):
+        return r500("Data not provided")
+    
+    if isinstance(data, QueryDict):
+        data = data.dict()
     try:
-        data = request.data
-        if not isinstance(data,(dict,QueryDict)):
-            return r500("Data not sent")
-        email = data.get('email',None) 
+        try:
+            request_data = EmailRequest.model_validate(data)
+        except VLError as e:
+            return r500(f"{e}")
+
+        email = request_data.email 
         if email is None:
             return r500("Email not received") 
         email = email.strip()
@@ -315,21 +254,24 @@ def ChangePassword(request:Request , token:str):
     if request.method != 'POST':
         return method_not_allowed()
     
+    data = request.data
+    if (not data) or not isinstance(data,(dict,QueryDict)):
+        return r500("Data not provided")
+    
+    if isinstance(data, QueryDict):
+        data = data.dict()
+    
     try:
-       
-        data = request.data
-        if not isinstance(data,(dict,QueryDict)):
-            return r500("Data not sent")
-        new_password = data.get('new_password',None) 
-        if new_password is None:
-            return r500("new_password not received") 
+        try:
+            request_data = NewPasswordRequest.model_validate(data)
+        except VLError as e:
+            return r500(f"{e}")
+        
+        new_password = request_data.new_password
         new_password = new_password.strip()
 
         if len(new_password) < 8:
             return Response({"error": "Password does not meet complexity requirements"}, status=400)
-        
-        # if len(new_password) < 8 or not any(char.isdigit() for char in new_password) or not any(char.isupper() for char in new_password) or not any(char.islower() for char in new_password) or not any(char in "!@#$%^&*()_+" for char in new_password):
-        #     return Response({"error": "Password does not meet complexity requirements"}, status=400)
         
         try:
             email = get_email_from_token(token)
@@ -423,18 +365,17 @@ class LoginUser(TokenObtainPairView):
         by django. 
     '''
     def post(self, request: Request, *args, **kwargs) -> Response:
-        if not isinstance(request.data,(dict,QueryDict)):
-            return r500("Data not sent")
-        if (not request.data.__contains__("username")): 
-            return ResponseWithCode({
-                "success":False,
-            },"Username Not given",400)
+        data = request.data
+        if (not data) or not isinstance(data,(dict,QueryDict)):
+            return r500("Data not provided")
         
-        if (not request.data.__contains__("password")): 
-            return ResponseWithCode({
-                "success":False,
-            },"Password Not given",400)
+        if isinstance(data, QueryDict):
+            data = data.dict()
 
+        try:
+            request_data = LoginRequest.model_validate(data)
+        except VLError as e:
+            return r500(f"{e}")
         result = super().post(request, *args, **kwargs)
         if (result.data):
             result.status_code = (result.data['status'])
@@ -495,16 +436,19 @@ def authenticated(request:Request):
         return method_not_allowed()
 
     data = request.data
-    if data is None or not isinstance(data,(dict,QueryDict)):
-        return ResponseWithCode({"success":False},'Data not sent as Required',500)
-    getUser = data.get("getUser",None)  
-    getEvent = data.get("getEvents",None) 
+    if (not data) or not isinstance(data,(dict,QueryDict)):
+        return r500("Data not provided")
+    
+    if isinstance(data, QueryDict):
+        data = data.dict()
 
-    if getUser is None:
-        return ResponseWithCode({"success":False},'getUser not sent.',500)
-
-    if getEvent is None:
-        return ResponseWithCode({"success":False},'getEvnt not sent.',500)
+    try:
+        request_data = AuthRequest.model_validate(data)
+    except VLError as e:
+        return r500(f"{e}")
+    
+    getUser = request_data.getUser
+    getEvent = request_data.getEvents 
 
     try:
         user = request.user
@@ -593,30 +537,25 @@ def updateUserRegTable(tableObject:TransactionTable,participants:list[str],trans
 
 @api_view(['POST'])
 def apply_event_paid(request: Request):
+    data = request.data
+    if (not data) or not isinstance(data,(dict,QueryDict)):
+        return r500("Data not provided")
+    
+    if isinstance(data, QueryDict):
+        data = data.dict()
+
     try:
-        data = request.data
-        if not data or not isinstance(data,(dict,QueryDict)):
-            return r500("Invalid form")
 
-        try:
-            part = data.get('participants',None) # type:ignore
-            event_id = data.get('eventId',None) 
-            transactionId = data.get('transactionID',None) 
-            CAcode = data.get('CACode',None) 
-            if event_id is None:
-                return r500("null event Id , key is eventId")
-            elif transactionId is None:
-                return r500("null transaction Id , key is transactionID")
-            elif CAcode is None:
-                return r500("null CAcode , key is CACode")
-            elif part is None or not isinstance(part,list):
-                return r500("null participants , key is participants")
-            participants :list[str] = part
-
-        except KeyError as e:
-            send_error_mail(inspect.stack()[0][3], request.data, e) 
-            return error_response("Missing required fields: participants, eventId, and transactionId")
+        try: 
+            request_data = EventPaid.model_validate(data)
+        except VLError as e:
+            return r500(f"{e}")
         
+        participants :list[str] = request_data.participants # type:ignore
+        event_id = request_data.eventId 
+        transactionId = request_data.transactionID
+        CAcode = request_data.CACode
+
         try:
             event = Event.objects.get(event_id = event_id)
         except Event.DoesNotExist:
@@ -643,9 +582,6 @@ def apply_event_paid(request: Request):
         if TransactionTable.objects.filter(transaction_id=transactionId).exists():
             return r500("Duplicate transaction ID used for another event")
 
-        
-
-        
         if event.fee == 0:
             return r500("This event is free. Please use api/event/free/")
                 
@@ -717,17 +653,20 @@ def apply_event_paid(request: Request):
 @api_view(['POST'])
 def apply_event_free(request: Request):
     data = request.data
-    if not isinstance(data,(dict,QueryDict)):
-        return r500("Data not sent")
+    if (not data) or not isinstance(data,(dict,QueryDict)):
+        return r500("Data not provided")
+    
+    if isinstance(data, QueryDict):
+        data = data.dict()
 
     try:
-        part = data.get('participants',None)   #type:ignore
-        event_id = data.get('eventId',None) 
-        if event_id is None:
-            return r500("null event Id , key is eventId")
-        elif part is None or not isinstance(part,list):
-            return r500("null participants , key is participants")
-        participants :list[str] = part
+        try: 
+            request_data = EventFree.model_validate(data)
+        except VLError as e:
+            return r500(f"{e}")
+        
+        participants :list[str] = request_data.participants # type:ignore
+        event_id = request_data.eventId
 
         event_id = event_id.strip()
 
@@ -803,6 +742,7 @@ def apply_event_free(request: Request):
         print(e)
         return error_response(f"Something went wrong: {str(e)}")
 
+@PendingDeprecationWarning
 @api_view(['POST'])
 def deregister_event(request: Request):
     data = request.data
@@ -871,17 +811,22 @@ def deregister_event(request: Request):
 
 @api_view(['POST'])
 def send_grievance(request: Request):
+    data = request.data
+    if (not data) or not isinstance(data,(dict,QueryDict)):
+        return r500("Data not provided")
+    
+    if isinstance(data, QueryDict):
+        data = data.dict()
+
     try:
-        data = request.data
-        if not isinstance(data,(dict,QueryDict)):
-            return r500("Data not sent")
+        try: 
+            request_data = Grievance.model_validate(data)
+        except VLError as e:
+            return r500(f"{e}")
         
-        if data.__contains__('name') and data.__contains__('email') and data.__contains__('content'): 
-            name = data.get('name',"") # type:ignore
-            email = data.get('email',"") # type:ignore
-            content = data.get('content',"") # type:ignore
-        else:
-            return r500("Data not received as required")
+        name = request_data.name
+        email = request_data.email
+        content = request_data.content
 
         send_mail(
             subject=f"WEBSITE MAIL: Grievance from '{name}'",
@@ -946,14 +891,19 @@ def get_ca_user(request:Request):
 def verifyCA(request: Request):
     if request.method != 'POST':
         return method_not_allowed()
+    data = request.data
+    if (not data) or not isinstance(data,(dict,QueryDict)):
+        return r500("Data not provided")
+    
+    if isinstance(data, QueryDict):
+        data = data.dict()
     try:
-        data = request.data
-
-        if data is None or not isinstance(data,(dict,QueryDict)):
-            return error_response("Invalid Form")
+        try:
+            request_data = CARequest.model_validate(data)
+        except VLError as e:
+            return r500(f"{e}")
         
-
-        inputCAcode = data.get('CACode','').strip() # type:ignore
+        inputCAcode = request_data.CACode.strip() # type:ignore
         try:
             ca_profile = CAProfile.objects.get(CACode=inputCAcode)
 

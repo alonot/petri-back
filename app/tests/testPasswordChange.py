@@ -67,7 +67,7 @@ class ForgetTest(TestCase):
             self.fail("Error")
 
         self.assertEqual(response.status_code, 500)
-        self.assertIn("Email not received",response.content.__str__())
+        self.assertIn("validation error",response.content.__str__())
 
 
 class ChangePasswordTest(TestCase):
@@ -121,7 +121,9 @@ class ChangePasswordTest(TestCase):
         response = self.client.post(f'/api/change-password/{self.token}/', {
             "new_password": "123"
         }, content_type="application/json")
-        self.assertEqual(response.status_code, 400)  # Assuming 400 for bad request due to weak password
+
+        self.assertEqual(response.status_code, 500) 
+        self.assertIn("Password must be at least 8 characters ", response.json()['message'])
 
     def test_change_password_with_expired_token(self):
         expired_token = "csk20020@gmail.com:1sdVox:rLDr9ATr2Ao5zbullIhE90SG_T2oV4LPGUXshDT4ftg"  # Simulate an expired token

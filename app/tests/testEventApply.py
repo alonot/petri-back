@@ -119,7 +119,7 @@ class EventApplicationTests(TestCase):
         }, format='json',HTTP_AUTHORIZATION=f"Bearer {self.token}")
 
         assert response.status_code == 500
-        assert response.json()["message"] == "null event Id , key is eventId"
+        self.assertIn("validation error", response.json()['message'])
         
         
 
@@ -309,7 +309,7 @@ class EventApplicationTests(TestCase):
         }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
         
         self.assertEqual(response2.status_code, 500) ## server must reject due to duplicate mails
-        self.assertIn('null transaction Id , key is transactionID', response2.json().get('message'))
+        self.assertIn('validation error', response2.json().get('message'))
     
     def test_apply_event_paid_null_CACode(self):
         response2 = self.client.post(reverse('applyEventpaid'), json.dumps({
@@ -319,7 +319,7 @@ class EventApplicationTests(TestCase):
         }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
         
         self.assertEqual(response2.status_code, 500) ## server must reject due to duplicate mails
-        self.assertIn('null CAcode , key is CACode', response2.json().get('message'))
+        self.assertIn('validation error', response2.json().get('message'))
     
     def test_apply_event_paid_wrong_event_id(self):
         response2 = self.client.post(reverse('applyEventpaid'), json.dumps({
@@ -363,7 +363,7 @@ class EventApplicationTests(TestCase):
         }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
         
         self.assertEqual(response2.status_code, 500) ## server must reject due to duplicate mails
-        self.assertIn('null participants , key is participants', response2.json().get('message'))
+        self.assertIn('validation error', response2.json().get('message'))
         
         response2 = self.client.post(reverse('applyEventpaid'), json.dumps({
             'transactionID': 'TXN009',
@@ -372,7 +372,7 @@ class EventApplicationTests(TestCase):
         }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
         
         self.assertEqual(response2.status_code, 500) ## server must reject due to duplicate mails
-        self.assertIn('null participants , key is participants', response2.json().get('message'))
+        self.assertIn('validation error', response2.json().get('message'))
     
     
     
@@ -517,7 +517,7 @@ class EventApplicationTests(TestCase):
         }), content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.token}")
         
         self.assertEqual(response2.status_code, 500) ## server must reject due to duplicate mails
-        self.assertIn('null event Id , key is eventId', response2.json().get('message'))
+        self.assertIn('validation error', response2.json().get('message'))
 
     def test_apply_event_free_multiple_event(self):
     # First registration attempt
