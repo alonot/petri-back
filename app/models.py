@@ -83,7 +83,7 @@ class TransactionTable(models.Model):
     CACode = models.ForeignKey(CAProfile,on_delete=models.SET_NULL,max_length=10, null=True)
     total_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     archived = models.BooleanField(default=False)
-    coupon = models.TextField(default="null")
+    coupon = models.TextField(default="null", null=True)
 
     def get_participants(self):
         return TransactionTable.deserialize_emails(self.participants)
