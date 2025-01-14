@@ -15,7 +15,7 @@ from django.core.mail import send_mail
 from django.contrib.auth.models import AnonymousUser
 from django.core.signing import SignatureExpired,BadSignature
 
-from petri_ca.settings import FRONTEND_LINK
+from petri_ca.settings import COUPON_CODES, FRONTEND_LINK
 from utils import CLOSED_REGISTRATIONS, ResponseWithCode, get_email_from_token, get_forget_token, get_profile_data, get_profile_events, has_duplicate,\
 r500,send_error_mail, method_not_allowed, send_event_registration_mail , send_forget_password_mail,error_response, send_user_verification_mail
 from .models import EMAIL_SEPARATOR, Institute, Profile, TransactionTable,Event,CAProfile,UserRegistrations
@@ -603,12 +603,15 @@ def apply_event_paid(request: Request):
             event_id = data.get('eventId',None) 
             transactionId = data.get('transactionID',None) 
             CAcode = data.get('CACode',None) 
+            coupon = data.get('coupon',None) 
             if event_id is None:
                 return r500("null event Id , key is eventId")
             elif transactionId is None:
                 return r500("null transaction Id , key is transactionID")
             elif CAcode is None:
                 return r500("null CAcode , key is CACode")
+            elif coupon is None:
+                return r500("null coupon , key is coupon")
             elif part is None or not isinstance(part,list):
                 return r500("null participants , key is participants")
             participants :list[str] = part
@@ -662,6 +665,18 @@ def apply_event_paid(request: Request):
             # the fees is treated as team fee
             total_fee = event.fee
         
+        # verify coupon
+        if coupon != "" and coupon != "null":
+            if coupon not in COUPON_CODES:
+                return r500(f"Invalid coupon code: {coupon}")
+        
+            total_fee = 0.9 * total_fee
+            total_fee = round(total_fee)
+
+        if coupon == "":
+            coupon = "null"
+        
+        
         ca_profile = None
         try:
             if CAcode != "null" and CAcode != "":
@@ -674,7 +689,6 @@ def apply_event_paid(request: Request):
                     pass
         except CAProfile.DoesNotExist:
             return ResponseWithCode({"success":False},"CA user not found",439)  # frontend need to check for this code, and display appropiate message
-        
 
         # Create a new event record
         eventpaidTableObject = TransactionTable(
@@ -685,8 +699,10 @@ def apply_event_paid(request: Request):
             verified=verified,
             CACode=ca_profile,
             total_fee = total_fee,
+            coupon = coupon,
             archived = False
         )
+
 
         # Check this above .save() to cancel any save operation
         message,regUsers =  updateUserRegTable(eventpaidTableObject,participants + [user.email], transactionId,event_id)
