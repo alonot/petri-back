@@ -18,7 +18,7 @@ PetrichorAuthenticator = PetrichorJWTAuthentication()
 PetrichroSigner = TimestampSigner(key=settings.FORGET_KEY,salt=settings.FORGET_SALT_KEY)
 
 AUTH_EXEMPT = ['/admin/','/internal/','/api/register/','/api/login/','/api/forget-password/','/api/change-password']
-CLOSED_REGISTRATIONS = ["TP06"]
+CLOSED_REGISTRATIONS = ['TP06', 'TP07', "TP04", "CP16", "CP06", "CP09", "CP05", "CP14"]
 # this is not used now.
 
 # Helper functions
@@ -154,8 +154,11 @@ def send_event_registration_mail(emails,event,verified):
 
 def send_event_verification_mail(emails, trIds,event):
     subject = 'Petrichor Event: ' + event
-    message = (f'''We have <strong>verified</strong> your registration for the event :{event} with given transactionId: {trIds}. Please visit the website for venue and date. You can also contact us here 
-      <a href="{settings.FRONTEND_LINK}/contactUs">Contact Us</a>
+    message = (f'''Your Payment for the event <strong>{event}</strong> Registration with transaction Id:<strong> {trIds} </strong> has been confirmed. In case you need accomodation, the details are mentioned below in the google form. If you have any queries please contact either Nikhil(8590118650) or Ajul(8921154307).
+               <br/><br/><a href="https://forms.gle/JBAWLd7U2J9RPoFe7">Accomodation</a><br/><br/>
+               Accomodation Form: https://forms.gle/JBAWLd7U2J9RPoFe7
+               <br/><br/><br/> You can also contact us here 
+      <a href="{settings.FRONTEND_LINK}/contactUs">Contact Us</a><br/><br/>
     ''')
     message +="<br> Thank you for participating in Petrichor'25."
     message = messageUser(" from the Petrichor Team",message)
@@ -1172,7 +1175,7 @@ def messageUser(name,message:str):
                         <h1>Hi {name},</h1>
                         {message}                        
                         <p>Thanks,
-                          <br>The Petrichor 25 team</p>
+                          <br>Team Petrichor'25</p>
                       </div>
                     </td>
                   </tr>

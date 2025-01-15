@@ -51,6 +51,7 @@ class EventPaid(BaseModel):
     eventId: str
     transactionID: str
     CACode: str
+    coupon: str
 
 class EventFree(BaseModel):
     participants: list[str]

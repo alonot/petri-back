@@ -719,7 +719,8 @@ def getDataFromID() -> tuple[dict,bool]:
                 "amount":team.total_fee,
                 "CA":CACode,
                 "parts":len(partis) + 1,
-                "verified": team.verified
+                "verified": team.verified,
+                "coupon": team.coupon
             }
             members = []
             if team.user_id:

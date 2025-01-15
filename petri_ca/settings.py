@@ -33,6 +33,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = (os.environ.get('DEBUG')) == "True"
 PASSWORD = (os.environ.get('PASSWORD'))
+COUPON_CODES = (os.environ.get('COUPON_CODES', "")).split(',')
 FRONTEND_LINK = "https://petrichor.events/"
 BACKEND_LINK = "https://petrichor-backend.vercel.app/"
 if DEBUG:
@@ -61,7 +62,7 @@ else:
         'http://localhost:5173', 'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://x.petrichor.events'
     ]
     ALLOWED_HOSTS = [
-        'localhost','127.0.0.1', 'https://petrichor.events', 'https://petrichor-events.vercel.app', ".vercel.app", 'x.petrichor.events'
+        'localhost','127.0.0.1', '10.32.7.123', 'https://petrichor.events', 'https://petrichor-events.vercel.app', ".vercel.app", 'x.petrichor.events'
     ]
     CORS_ORIGIN_WHITELIST = [
         'http://localhost:5173', 'https://petrichor.events', 'https://petrichor-events.vercel.app', 'https://.petrichor.events'
