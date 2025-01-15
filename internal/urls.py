@@ -14,7 +14,8 @@ urlpatterns = [
     path('images/info/',views.allImagesInfo,name="getAllImagesInfo"),
     path('image/',views.get_image_data,name="getImage"), 
     path('sheets/view/', views.display_sheet, name="display_sheet"),
-    path('sheets/users/',views.getAllUsers,name="get_users")
+    path('sheets/users/',views.getAllUsers,name="get_users"),
+    path('sheets/user/',views.getUser,name="get_user")
     # path('unverifTR',views.unverifTR , name="unverifTR"),
     # path('cancelTR',views.cancelTR , name="cancelTR")
 ]

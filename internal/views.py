@@ -15,7 +15,7 @@ from rest_framework.decorators import api_view
 
 from internal.models import Image
 from petri_ca.settings import PASSWORD
-from utils import ResponseWithCode, method_not_allowed, r200, r500 , send_delete_transaction_mail, send_error_mail, send_event_unverification_mail, send_event_verification_mail
+from utils import ResponseWithCode, get_profile_data, method_not_allowed, r200, r500 , send_delete_transaction_mail, send_error_mail, send_event_unverification_mail, send_event_verification_mail
 
 
 @api_view(['POST'])
@@ -29,6 +29,38 @@ def getAllUsers(request):
         },"Data Fetched")
     else :
         return r500("Fetch failed")
+
+@api_view(['POST'])
+def getUser(request):
+    try:
+        data= request.data
+        if (not data) or not isinstance(data,(dict,QueryDict)):
+            return r500("Data not provided")
+        password = data.get("password" , None)
+        if password is None:
+            return r500("password is missing") 
+        
+        if (password != PASSWORD):
+            return r500("Incorrect password. Event was not added")
+        
+        email = data.get("email" , None)
+        if email is None:
+            return r500("email is missing") 
+        
+        try:
+            user = User.objects.get(username = email)
+            user_data = get_profile_data(user.profile) # type:ignore
+            return ResponseWithCode({
+                "success": True,
+                "user_data": user_data
+            }, "Data Fetched successfully")
+        except User.DoesNotExist as e:
+            return r500(f"Given User: {email} not found.")
+
+        
+    except Exception as e:
+        send_error_mail(inspect.stack()[0][3], {"data":"GETUSERS"}, e)
+        return r500(f"Error: {e}")
 
 
 def getUsersData():
