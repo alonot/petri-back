@@ -164,7 +164,7 @@ class EventApplicationTests(TestCase):
             "coupon": COUPON_CODES[0]
         }, format='json',HTTP_AUTHORIZATION=f"Bearer {self.token_non_insti}")
 
-        print(response.status_code, response.json())  # Debug print
+        # print(response.status_code, response.json())  # Debug print
         self.assertEqual(response.status_code, 200)
         self.assertEqual(TransactionTable.objects.count(), 1)
         transaction = TransactionTable.objects.first()
