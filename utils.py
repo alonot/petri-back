@@ -18,7 +18,7 @@ PetrichorAuthenticator = PetrichorJWTAuthentication()
 PetrichroSigner = TimestampSigner(key=settings.FORGET_KEY,salt=settings.FORGET_SALT_KEY)
 
 AUTH_EXEMPT = ['/admin/','/internal/','/api/register/','/api/login/','/api/forget-password/','/api/change-password']
-CLOSED_REGISTRATIONS = ['TP06', 'TP07', "TP04", "CP16", "CP06", "CP09", "CP05", "CP14"]
+CLOSED_REGISTRATIONS = ['TP06', 'TP07', "TP04", "CP16", "CP06", "CP09", "CP05", "CP14", "TP10", "TP08"]
 # this is not used now.
 
 # Helper functions
